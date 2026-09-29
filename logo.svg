@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 130" role="img" aria-label="Gilbert Construction L.L.C.">
+  <defs>
+    <style>
+      .word {
+        font-family: Georgia, "Times New Roman", serif;
+        font-weight: 900;
+        font-size: 84px;
+        letter-spacing: 2px;
+        fill: #111111;
+        stroke: #B4302B;
+        stroke-width: 2.5px;
+        paint-order: stroke fill;
+      }
+      .script {
+        font-family: "Brush Script MT", "Segoe Script", cursive;
+        font-size: 40px;
+        fill: #B4302B;
+      }
+    </style>
+  </defs>
+  <text x="280" y="72" text-anchor="middle" class="word">GILBERT</text>
+  <text x="280" y="118" text-anchor="middle" class="script">Construction L.L.C.</text>
+</svg>

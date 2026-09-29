@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#7B1E1E" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="GCI Photos" />
+<title>Gilbert Construction — Progress Photos</title>
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<link rel="icon" href="icon-192.png" />
+<link rel="stylesheet" href="style.css" />
+<script src="vendor/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="header-brand">
+    <div class="header-logo-badge"><img src="logo.svg" alt="Gilbert Construction L.L.C." class="header-logo" /></div>
+    <div class="header-titles">
+      <h1>Progress Photos</h1>
+      <span class="header-sub" id="headerDate"></span>
+    </div>
+  </div>
+  <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings">⚙</button>
+</header>
+
+<main id="app">
+
+  <!-- CAPTURE TAB -->
+  <section class="screen" id="screen-capture">
+    <div class="card capture-card">
+      <label class="photo-drop" id="photoDrop">
+        <input type="file" accept="image/*" capture="environment" id="photoInput" hidden />
+        <div class="photo-drop-empty" id="photoDropEmpty">
+          <div class="camera-icon">📷</div>
+          <div class="photo-drop-text">Tap to take a photo</div>
+          <div class="photo-drop-sub">or choose from library</div>
+        </div>
+        <img id="photoPreview" class="photo-preview" hidden />
+      </label>
+      <button class="btn-ghost-sm" id="retakeBtn" hidden>Retake photo</button>
+    </div>
+
+    <div class="card">
+      <div class="field">
+        <label for="jobSelect">Job site</label>
+        <div class="select-row">
+          <select id="jobSelect"></select>
+          <button class="btn-square" id="addJobQuick" title="Add job">+</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="label-row">
+          <label>Equipment used</label>
+          <span class="label-hint">tap all that apply</span>
+        </div>
+        <div id="equipmentGroups"></div>
+      </div>
+
+      <div class="field">
+        <label for="noteInput">Notes</label>
+        <textarea id="noteInput" rows="3" placeholder="What was done today, progress, issues..."></textarea>
+      </div>
+
+      <div class="field">
+        <label>Location tag</label>
+        <div class="location-row">
+          <button class="btn-ghost-sm" id="addLocationBtn" type="button">📍 Add current location</button>
+          <span class="location-label" id="locationLabel"></span>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-primary btn-save" id="saveEntryBtn" disabled>Save Progress Entry</button>
+  </section>
+
+  <!-- HISTORY / LOG TAB -->
+  <section class="screen" id="screen-history" hidden>
+    <div class="view-toggle">
+      <button class="view-toggle-btn active" data-view="list" id="viewListBtn">🗂️ List</button>
+      <button class="view-toggle-btn" data-view="calendar" id="viewCalendarBtn">📅 Calendar</button>
+    </div>
+
+    <div id="logListView">
+      <p class="hint-text hint-top">Every saved entry shows up here — log as many jobs and equipment as you touch in a day, they'll all be kept separate.</p>
+      <div class="filter-bar">
+        <select id="historyJobFilter">
+          <option value="">All jobs</option>
+        </select>
+        <input type="date" id="historyDateFilter" />
+        <button class="btn-ghost-sm" id="clearFiltersBtn">Clear</button>
+      </div>
+      <div id="historyList" class="history-list"></div>
+      <div class="empty-state" id="historyEmpty" hidden>
+        <div class="empty-icon">🗂️</div>
+        <p>No progress entries yet. Capture your first photo from the Capture tab.</p>
+      </div>
+    </div>
+
+    <div id="logCalendarView" hidden>
+      <p class="hint-text hint-top">Every day you've logged is saved here — pull it back up any time documentation gets questioned.</p>
+      <div class="card calendar-card">
+        <div class="calendar-header">
+          <button class="btn-square" id="calPrevBtn">‹</button>
+          <div class="calendar-month-label" id="calMonthLabel"></div>
+          <button class="btn-square" id="calNextBtn">›</button>
+        </div>
+        <button class="btn-ghost-sm" id="calTodayBtn">Jump to today</button>
+        <div class="calendar-weekdays">
+          <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+        </div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+      </div>
+
+      <div class="card" id="calDayCard" hidden>
+        <h2 class="card-title" id="calDayTitle"></h2>
+        <div id="calDayEntries" class="history-list"></div>
+        <button class="btn-primary" id="calDayPdfBtn">📄 Download PDF for this day</button>
+      </div>
+      <div class="empty-state" id="calDayEmpty">
+        <div class="empty-icon">📅</div>
+        <p>Tap a highlighted day to review everything logged that day.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- REPORT TAB -->
+  <section class="screen" id="screen-report" hidden>
+    <div class="card">
+      <h2 class="card-title">Build a Report</h2>
+      <div class="field">
+        <label for="reportJobFilter">Job site</label>
+        <select id="reportJobFilter">
+          <option value="">All jobs</option>
+        </select>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="reportStart">From</label>
+          <input type="date" id="reportStart" />
+        </div>
+        <div class="field">
+          <label for="reportEnd">To</label>
+          <input type="date" id="reportEnd" />
+        </div>
+      </div>
+      <button class="btn-primary" id="buildReportBtn">Generate Report</button>
+    </div>
+    <div id="reportPreviewWrap" hidden>
+      <div class="card">
+        <p class="report-count" id="reportCount"></p>
+        <button class="btn-primary" id="downloadPdfBtn">📄 Download PDF Report</button>
+        <button class="btn-primary btn-secondary" id="sharePdfBtn" hidden>📤 Share Report (Email / Text)</button>
+        <button class="btn-ghost-sm" id="printReportBtn">🖨️ Print instead</button>
+        <p class="hint-text" id="pdfStatus"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CALCULATORS TAB -->
+  <section class="screen" id="screen-calc" hidden>
+    <p class="hint-text hint-top">Field takeoff calculators for earthwork. All figures are estimates — verify against the actual bid and soil conditions before committing.</p>
+
+    <div class="card">
+      <button class="btn-primary" id="downloadCalcPdfBtn">📄 Download Calc Sheet PDF</button>
+      <button class="btn-primary btn-secondary" id="shareCalcPdfBtn" hidden>📤 Share Calc Sheet</button>
+      <button class="btn-ghost-sm" id="printCalcBtn">🖨️ Print instead</button>
+      <p class="hint-text" id="calcPdfStatus"></p>
+    </div>
+
+    <div class="card calc-card">
+      <h2 class="card-title">Rectangular Cut / Fill Volume</h2>
+      <p class="hint-text hint-top">Side profile — updates as you type.</p>
+      <div class="calc-illustration">
+        <svg viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
+          <line x1="20" y1="50" x2="280" y2="50" stroke="#595959" stroke-width="1" stroke-dasharray="3,3"/>
+          <text x="24" y="42" font-size="10" fill="#595959">GRADE</text>
+          <rect id="rectIllusBox" x="90" y="50" width="120" height="50" fill="#1F3864" stroke="#3A3A3A" stroke-width="1.5"/>
+          <line id="rectDimLenLine" x1="90" y1="112" x2="210" y2="112" stroke="#7B1E1E" stroke-width="1.5"/>
+          <line id="rectDimLenTickA" x1="90" y1="107" x2="90" y2="117" stroke="#7B1E1E" stroke-width="1.5"/>
+          <line id="rectDimLenTickB" x1="210" y1="107" x2="210" y2="117" stroke="#7B1E1E" stroke-width="1.5"/>
+          <text id="rectDimLenLabel" x="150" y="128" text-anchor="middle" font-size="12" font-weight="700" fill="#7B1E1E">Length: —</text>
+          <line id="rectDimDepthLine" x1="70" y1="50" x2="70" y2="100" stroke="#1F3864" stroke-width="1.5"/>
+          <line x1="65" y1="50" x2="75" y2="50" stroke="#1F3864" stroke-width="1.5"/>
+          <line id="rectDimDepthTickB" x1="65" y1="100" x2="75" y2="100" stroke="#1F3864" stroke-width="1.5"/>
+          <text id="rectDimDepthLabel" x="55" y="78" text-anchor="middle" font-size="12" font-weight="700" fill="#1F3864" transform="rotate(-90 55 78)">Depth: —</text>
+          <text id="rectDimWidthLabel" x="150" y="145" text-anchor="middle" font-size="11" font-weight="700" fill="#5A1414">Width (into page): —</text>
+        </svg>
+      </div>
+      <div class="calc-grid">
+        <div class="field"><label>Length (ft)</label><input type="number" inputmode="decimal" class="calc-input" data-calc="rect" data-field="length" /></div>
+        <div class="field"><label>Width (ft)</label><input type="number" inputmode="decimal" class="calc-input" data-calc="rect" data-field="width" /></div>
+        <div class="field"><label>Depth (ft)</label><input type="number" inputmode="decimal" class="calc-input" data-calc="rect" data-field="depth" /></div>
+      </div>
+      <div class="calc-result" id="result-rect">Enter length, width &amp; depth</div>
+      <button class="btn-ghost-sm calc-send" data-target="prod" data-source="rect">Send cu. yd. to Time Estimator ↓</button>
+    </div>
+
+    <div class="card calc-card">
+      <h2 class="card-title">Depth from Elevations</h2>
+      <p class="hint-text hint-top">Existing minus proposed. Positive = cut, negative = fill. Side profile — updates as you type.</p>
+      <div class="calc-illustration">
+        <svg viewBox="0 0 300 130" xmlns="http://www.w3.org/2000/svg">
+          <polygon id="elevFillArea" points="40,40 260,40 260,90 40,90" fill="#7B1E1E" fill-opacity="0.18"/>
+          <line id="elevExistingLine" x1="40" y1="40" x2="260" y2="40" stroke="#3A3A3A" stroke-width="2" stroke-dasharray="6,4"/>
+          <text x="44" y="32" font-size="11" font-weight="700" fill="#3A3A3A">EXISTING</text>
+          <line id="elevProposedLine" x1="40" y1="90" x2="260" y2="90" stroke="#1F3864" stroke-width="2.5"/>
+          <text id="elevProposedLabel" x="44" y="106" font-size="11" font-weight="700" fill="#1F3864">PROPOSED</text>
+          <line id="elevDepthLine" x1="150" y1="40" x2="150" y2="90" stroke="#7B1E1E" stroke-width="1.5"/>
+          <line id="elevDepthTickA" x1="145" y1="40" x2="155" y2="40" stroke="#7B1E1E" stroke-width="1.5"/>
+          <line id="elevDepthTickB" x1="145" y1="90" x2="155" y2="90" stroke="#7B1E1E" stroke-width="1.5"/>
+          <text id="elevDepthLabel" x="160" y="68" font-size="11" font-weight="700" fill="#7B1E1E">Depth: —</text>
+          <text id="elevAreaLabel" x="150" y="122" text-anchor="middle" font-size="11" font-weight="700" fill="#595959">Area: —</text>
+        </svg>
+      </div>
+      <div class="calc-grid">
+        <div class="field"><label>Existing Elev. (ft)</label><input type="number" inputmode="decimal" class="calc-input" data-calc="elev" data-field="existing" /></div>
+        <div class="field"><label>Proposed Elev. (ft)</label><input type="number" inputmode="decimal" class="calc-input" data-calc="elev" data-field="proposed" /></div>
+        <div class="field"><label>Area (sq ft)</label><input type="number" inputmode="decimal" class="calc-input" data-calc="elev" data-field="area" /></div>
+      </div>
+      <div class="calc-result" id="result-elev">Enter elevations &amp; area</div>
+      <button class="btn-ghost-sm calc-send" data-target="prod" data-source="elev">Send cu. yd. to Time Estimator ↓</button>
+    </div>
+
+    <div class="card calc-card">
+      <h2 class="card-title">Pad / Pond Avg. Depth (Multi-Point)</h2>
+      <p class="hint-text hint-top">For house pads, ponds &amp; arenas with uneven grade — take a cut/fill reading at each grid point (corners + center is the standard 5-point method), and this averages them across the footprint. Cut = positive, fill = negative.</p>
+      <div class="calc-illustration">
+        <svg viewBox="0 0 300 145" xmlns="http://www.w3.org/2000/svg">
+          <rect x="70" y="20" width="160" height="90" fill="#F5F0EE" stroke="#3A3A3A" stroke-width="1.5"/>
+          <circle cx="70" cy="20" r="4" fill="#7B1E1E"/>
+          <circle cx="230" cy="20" r="4" fill="#7B1E1E"/>
+          <circle cx="70" cy="110" r="4" fill="#7B1E1E"/>
+          <circle cx="230" cy="110" r="4" fill="#7B1E1E"/>
+          <circle cx="150" cy="65" r="4" fill="#1F3864"/>
+          <text x="150" y="12" text-anchor="middle" font-size="10" fill="#595959">PLAN VIEW — GRID POINTS</text>
+          <text id="gridAvgLabel" x="150" y="132" text-anchor="middle" font-size="11" font-weight="700" fill="#1F3864"></text>
+        </svg>
+      </div>
+      <div class="field"><label>Pad / Pond Area (sq ft)</label><input type="number" inputmode="decimal" class="calc-input" data-calc="grid" data-field="area" id="gridAreaInput" /></div>
+      <label>Depth Readings (ft) — cut +, fill −</label>
+      <div id="gridReadingsList" class="grid-readings-list"></div>
+      <button class="btn-ghost-sm" id="gridAddReadingBtn" type="button">+ Add reading point</button>
+      <div class="calc-result" id="result-grid">Enter area &amp; at least one reading</div>
+      <button class="btn-ghost-sm calc-send" data-target="prod" data-source="grid">Send cu. yd. to Time Estimator ↓</button>
+    </div>
+
+    <div class="card calc-card">
+      <h2 class="card-title">Trench / Linear Cross-Section</h2>
+      <p class="hint-text hint-top">Average end area method — good for trenches, swales &amp; roads. Side profile — updates as you type.</p>
+      <div class="calc-illustration">
+        <svg viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
+          <line x1="20" y1="45" x2="280" y2="45" stroke="#595959" stroke-width="1" stroke-dasharray="3,3"/>
+          <text x="24" y="37" font-size="10" fill="#595959">GRADE</text>
+          <polygon id="trenchShape" points="90,45 210,45 195,105 105,105" fill="#1F3864" stroke="#3A3A3A" stroke-width="1.5"/>
+          <text id="trenchTopLabel" x="150" y="37" text-anchor="middle" font-size="11" font-weight="700" fill="#5A1414">Top width: —</text>
+          <text id="trenchBottomLabel" x="150" y="120" text-anchor="middle" font-size="11" font-weight="700" fill="#1F3864">Bottom width: —</text>
+          <line id="trenchDepthLine" x1="70" y1="45" x2="70" y2="105" stroke="#7B1E1E" stroke-width="1.5"/>
+          <line x1="65" y1="45" x2="75" y2="45" stroke="#7B1E1E" stroke-width="1.5"/>
+          <line id="trenchDepthTickB" x1="65" y1="105" x2="75" y2="105" stroke="#7B1E1E" stroke-width="1.5"/>
+          <text id="trenchDepthLabel" x="55" y="75" text-anchor="middle" font-size="12" font-weight="700" fill="#7B1E1E" transform="rotate(-90 55 75)">Depth: —</text>
+          <text id="trenchLengthLabel" x="150" y="140" text-anchor="middle" font-size="11" font-weight="700" fill="#595959">Run length: —</text>
+        </svg>
+      </div>
+      <div class="calc-grid">
+        <div class="field"><label>Top Width (ft)</label><input type="number" inputmode="decimal" class="calc-input" data-calc="trench" data-field="topWidth" /></div>
+        <div class="field"><label>Bottom Width (ft)</label><input type="number" inputmode="decimal" class="calc-input" data-calc="trench" data-field="bottomWidth" /></div>
+        <div class="field"><label>Depth (ft)</label><input type="number" inputmode="decimal" class="calc-input" data-calc="trench" data-field="depth" /></div>
+        <div class="field"><label>Length (ft)</label><input type="number" inputmode="decimal" class="calc-input" data-calc="trench" data-field="length" /></div>
+      </div>
+      <div class="calc-result" id="result-trench">Enter dimensions</div>
+      <button class="btn-ghost-sm calc-send" data-target="prod" data-source="trench">Send cu. yd. to Time Estimator ↓</button>
+    </div>
+
+    <div class="card calc-card">
+      <h2 class="card-title">Bank / Loose / Compacted Conversion</h2>
+      <p class="hint-text hint-top">Relative volume — updates as you type.</p>
+      <div class="calc-illustration">
+        <svg viewBox="0 0 300 130" xmlns="http://www.w3.org/2000/svg">
+          <line x1="20" y1="105" x2="280" y2="105" stroke="#3A3A3A" stroke-width="1.5"/>
+          <rect id="swellBarBank" x="55" y="45" width="50" height="60" fill="#1F3864" stroke="#3A3A3A" stroke-width="1"/>
+          <text x="80" y="118" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1F3864">BANK</text>
+          <text id="swellBankVal" x="80" y="40" text-anchor="middle" font-size="10" font-weight="700" fill="#1F3864">—</text>
+          <rect id="swellBarLoose" x="125" y="45" width="50" height="60" fill="#F5C86B" stroke="#3A3A3A" stroke-width="1"/>
+          <text x="150" y="118" text-anchor="middle" font-size="10.5" font-weight="700" fill="#7F6000">LOOSE</text>
+          <text id="swellLooseVal" x="150" y="40" text-anchor="middle" font-size="10" font-weight="700" fill="#7F6000">—</text>
+          <rect id="swellBarCompacted" x="195" y="45" width="50" height="60" fill="#7B1E1E" stroke="#3A3A3A" stroke-width="1"/>
+          <text x="220" y="118" text-anchor="middle" font-size="10.5" font-weight="700" fill="#7B1E1E">COMPACTED</text>
+          <text id="swellCompactedVal" x="220" y="40" text-anchor="middle" font-size="10" font-weight="700" fill="#7B1E1E">—</text>
+        </svg>
+      </div>
+      <div class="calc-grid">
+        <div class="field"><label>Bank Cu. Yd.</label><input type="number" inputmode="decimal" class="calc-input" data-calc="swell" data-field="bankCY" /></div>
+        <div class="field"><label>Swell % (loose)</label><input type="number" inputmode="decimal" class="calc-input" data-calc="swell" data-field="swellPct" placeholder="e.g. 25" /></div>
+        <div class="field"><label>Shrink % (compacted)</label><input type="number" inputmode="decimal" class="calc-input" data-calc="swell" data-field="shrinkPct" placeholder="e.g. 10" /></div>
+      </div>
+      <div class="calc-result" id="result-swell">Enter bank cu. yd.</div>
+    </div>
+
+    <div class="card calc-card">
+      <h2 class="card-title">Truck Loads Needed</h2>
+      <p class="hint-text hint-top">One icon per load — updates as you type.</p>
+      <div class="calc-illustration">
+        <svg viewBox="0 0 300 90" xmlns="http://www.w3.org/2000/svg">
+          <g id="truckIconRow"></g>
+          <text id="truckOverflowLabel" x="290" y="55" text-anchor="end" font-size="12" font-weight="700" fill="#7B1E1E"></text>
+        </svg>
+      </div>
+      <div class="calc-grid">
+        <div class="field"><label>Total Cu. Yd. to Haul</label><input type="number" inputmode="decimal" class="calc-input" data-calc="truck" data-field="totalCY" /></div>
+        <div class="field"><label>Truck Capacity (CY)</label><input type="number" inputmode="decimal" class="calc-input" data-calc="truck" data-field="capacity" value="6" /></div>
+      </div>
+      <div class="calc-result" id="result-truck">Enter volume &amp; truck capacity</div>
+    </div>
+
+    <div class="card calc-card" id="calc-prod">
+      <h2 class="card-title">Production Time Estimator</h2>
+      <p class="hint-text hint-top">Works for excavators, loaders, graders, rollers, or trucking — just set the unit and rate. Updates as you type.</p>
+      <div class="calc-illustration">
+        <svg viewBox="0 0 300 90" xmlns="http://www.w3.org/2000/svg">
+          <text id="prodBarLabel" x="20" y="20" font-size="13" font-weight="700" fill="#1F3864">—</text>
+          <rect x="20" y="30" width="260" height="22" rx="4" fill="#EDE7E4" stroke="#3A3A3A" stroke-width="1"/>
+          <rect id="prodBarFill" x="20" y="30" width="0" height="22" rx="4" fill="#1F3864"/>
+          <text x="20" y="66" font-size="10" fill="#595959">0 days</text>
+          <text id="prodDayScaleLabel" x="280" y="66" text-anchor="end" font-size="10" fill="#595959">—</text>
+        </svg>
+      </div>
+      <div class="calc-grid">
+        <div class="field"><label>Quantity</label><input type="number" inputmode="decimal" class="calc-input" data-calc="prod" data-field="qty" /></div>
+        <div class="field">
+          <label>Unit</label>
+          <select class="calc-input" data-calc="prod" data-field="unit">
+            <option value="CY">Cu. Yd.</option>
+            <option value="SY">Sq. Yd.</option>
+            <option value="LF">Linear Ft.</option>
+            <option value="Loads">Truck Loads</option>
+          </select>
+        </div>
+        <div class="field"><label>Production Rate (per hr)</label><input type="number" inputmode="decimal" class="calc-input" data-calc="prod" data-field="rate" /></div>
+        <div class="field"><label>Hours / Day</label><input type="number" inputmode="decimal" class="calc-input" data-calc="prod" data-field="hoursPerDay" value="8" /></div>
+      </div>
+      <div class="calc-result" id="result-prod">Enter quantity &amp; production rate</div>
+    </div>
+  </section>
+
+  <!-- JOBS TAB -->
+  <section class="screen" id="screen-jobs" hidden>
+    <div class="card">
+      <h2 class="card-title">Job Sites</h2>
+      <div class="add-row">
+        <input type="text" id="newJobInput" placeholder="New job site name" />
+        <button class="btn-square" id="addJobBtn">+</button>
+      </div>
+      <ul class="manage-list" id="jobList"></ul>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">GCI Fleet</h2>
+      <div class="add-row">
+        <input type="text" id="newFleetInput" placeholder="New fleet equipment name" />
+        <button class="btn-square" id="addFleetBtn">+</button>
+      </div>
+      <ul class="manage-list" id="fleetList"></ul>
+      <p class="hint-text">Pulled from the Gilbert Construction KPI Dashboard fleet sheets.</p>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">Rental / Leased Equipment</h2>
+      <div class="add-row">
+        <input type="text" id="newRentalInput" placeholder="e.g. Rented Excavator - ABC Rental" />
+        <button class="btn-square" id="addRentalBtn">+</button>
+      </div>
+      <ul class="manage-list" id="rentalList"></ul>
+      <p class="hint-text">You can also add a rental on the fly from the Capture tab — no need to come here first.</p>
+    </div>
+  </section>
+
+</main>
+
+<nav class="tab-bar">
+  <button class="tab-btn active" data-tab="capture">
+    <span class="tab-icon">📷</span><span>Capture</span>
+  </button>
+  <button class="tab-btn" data-tab="history">
+    <span class="tab-icon">🗂️</span><span>Log</span>
+  </button>
+  <button class="tab-btn" data-tab="calc">
+    <span class="tab-icon">🧮</span><span>Calc</span>
+  </button>
+  <button class="tab-btn" data-tab="report">
+    <span class="tab-icon">📄</span><span>Report</span>
+  </button>
+  <button class="tab-btn" data-tab="jobs">
+    <span class="tab-icon">🏗️</span><span>Manage</span>
+  </button>
+</nav>
+
+<!-- ENTRY DETAIL MODAL -->
+<div class="modal-backdrop" id="entryModal" hidden>
+  <div class="modal">
+    <button class="modal-close" id="closeModalBtn">✕</button>
+    <img id="modalPhoto" class="modal-photo" />
+    <div class="modal-body">
+      <div class="modal-row"><strong id="modalJob"></strong><span id="modalDate"></span></div>
+      <div class="modal-equip" id="modalEquip"></div>
+      <p class="modal-note" id="modalNote"></p>
+      <p class="modal-location" id="modalLocation"></p>
+      <button class="btn-danger-sm" id="deleteEntryBtn">Delete entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast" hidden></div>
+
+<!-- PRINT REPORT CONTAINER (off-screen, used only for printing) -->
+<div id="printArea"></div>
+
+<script src="app.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
+</script>
+</body>
+</html>
