@@ -71,8 +71,9 @@
         <label>Location tag</label>
         <div class="location-row">
           <button class="btn-ghost-sm" id="addLocationBtn" type="button">📍 Add current location</button>
-          <span class="location-label" id="locationLabel"></span>
         </div>
+        <p class="location-label" id="locationLabel"></p>
+        <button class="btn-ghost-sm" id="shareLocationBtn" type="button" hidden>📤 Share location pin</button>
       </div>
     </div>
 
@@ -167,6 +168,18 @@
     <p class="hint-text hint-top">Field takeoff calculators for earthwork. All figures are estimates — verify against the actual bid and soil conditions before committing.</p>
 
     <div class="card">
+      <div class="field" style="margin-bottom:0;">
+        <label for="calcUnitMode">Measurement units (applies to every calculator below)</label>
+        <select id="calcUnitMode">
+          <option value="dft">Decimal Feet — e.g. 12.50</option>
+          <option value="ftin">Feet &amp; Inches — e.g. 12'6"</option>
+          <option value="in">Inches — e.g. 150.5</option>
+          <option value="m">Meters — e.g. 3.81</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
       <button class="btn-primary" id="downloadCalcPdfBtn">📄 Download Calc Sheet PDF</button>
       <button class="btn-primary btn-secondary" id="shareCalcPdfBtn" hidden>📤 Share Calc Sheet</button>
       <button class="btn-ghost-sm" id="printCalcBtn">🖨️ Print instead</button>
@@ -193,9 +206,9 @@
         </svg>
       </div>
       <div class="calc-grid">
-        <div class="field"><label>Length (ft)</label><input type="number" inputmode="decimal" class="calc-input" data-calc="rect" data-field="length" /></div>
-        <div class="field"><label>Width (ft)</label><input type="number" inputmode="decimal" class="calc-input" data-calc="rect" data-field="width" /></div>
-        <div class="field"><label>Depth (ft)</label><input type="number" inputmode="decimal" class="calc-input" data-calc="rect" data-field="depth" /></div>
+        <div class="field"><label id="lbl-rect-length">Length</label><input type="text" inputmode="decimal" class="calc-input" data-calc="rect" data-field="length" data-unit="linear" /></div>
+        <div class="field"><label id="lbl-rect-width">Width</label><input type="text" inputmode="decimal" class="calc-input" data-calc="rect" data-field="width" data-unit="linear" /></div>
+        <div class="field"><label id="lbl-rect-depth">Depth</label><input type="text" inputmode="decimal" class="calc-input" data-calc="rect" data-field="depth" data-unit="linear" /></div>
       </div>
       <div class="calc-result" id="result-rect">Enter length, width &amp; depth</div>
       <button class="btn-ghost-sm calc-send" data-target="prod" data-source="rect">Send cu. yd. to Time Estimator ↓</button>
@@ -219,9 +232,9 @@
         </svg>
       </div>
       <div class="calc-grid">
-        <div class="field"><label>Existing Elev. (ft)</label><input type="number" inputmode="decimal" class="calc-input" data-calc="elev" data-field="existing" /></div>
-        <div class="field"><label>Proposed Elev. (ft)</label><input type="number" inputmode="decimal" class="calc-input" data-calc="elev" data-field="proposed" /></div>
-        <div class="field"><label>Area (sq ft)</label><input type="number" inputmode="decimal" class="calc-input" data-calc="elev" data-field="area" /></div>
+        <div class="field"><label id="lbl-elev-existing">Existing Elev.</label><input type="text" inputmode="decimal" class="calc-input" data-calc="elev" data-field="existing" data-unit="linear" /></div>
+        <div class="field"><label id="lbl-elev-proposed">Proposed Elev.</label><input type="text" inputmode="decimal" class="calc-input" data-calc="elev" data-field="proposed" data-unit="linear" /></div>
+        <div class="field"><label id="lbl-elev-area">Area</label><input type="text" inputmode="decimal" class="calc-input" data-calc="elev" data-field="area" data-unit="area" /></div>
       </div>
       <div class="calc-result" id="result-elev">Enter elevations &amp; area</div>
       <button class="btn-ghost-sm calc-send" data-target="prod" data-source="elev">Send cu. yd. to Time Estimator ↓</button>
@@ -242,7 +255,7 @@
           <text id="gridAvgLabel" x="150" y="132" text-anchor="middle" font-size="11" font-weight="700" fill="#1F3864"></text>
         </svg>
       </div>
-      <div class="field"><label>Pad / Pond Area (sq ft)</label><input type="number" inputmode="decimal" class="calc-input" data-calc="grid" data-field="area" id="gridAreaInput" /></div>
+      <div class="field"><label id="lbl-grid-area">Pad / Pond Area</label><input type="text" inputmode="decimal" class="calc-input" data-calc="grid" data-field="area" data-unit="area" id="gridAreaInput" /></div>
       <label>Depth Readings (ft) — cut +, fill −</label>
       <div id="gridReadingsList" class="grid-readings-list"></div>
       <button class="btn-ghost-sm" id="gridAddReadingBtn" type="button">+ Add reading point</button>
@@ -268,10 +281,10 @@
         </svg>
       </div>
       <div class="calc-grid">
-        <div class="field"><label>Top Width (ft)</label><input type="number" inputmode="decimal" class="calc-input" data-calc="trench" data-field="topWidth" /></div>
-        <div class="field"><label>Bottom Width (ft)</label><input type="number" inputmode="decimal" class="calc-input" data-calc="trench" data-field="bottomWidth" /></div>
-        <div class="field"><label>Depth (ft)</label><input type="number" inputmode="decimal" class="calc-input" data-calc="trench" data-field="depth" /></div>
-        <div class="field"><label>Length (ft)</label><input type="number" inputmode="decimal" class="calc-input" data-calc="trench" data-field="length" /></div>
+        <div class="field"><label id="lbl-trench-topWidth">Top Width</label><input type="text" inputmode="decimal" class="calc-input" data-calc="trench" data-field="topWidth" data-unit="linear" /></div>
+        <div class="field"><label id="lbl-trench-bottomWidth">Bottom Width</label><input type="text" inputmode="decimal" class="calc-input" data-calc="trench" data-field="bottomWidth" data-unit="linear" /></div>
+        <div class="field"><label id="lbl-trench-depth">Depth</label><input type="text" inputmode="decimal" class="calc-input" data-calc="trench" data-field="depth" data-unit="linear" /></div>
+        <div class="field"><label id="lbl-trench-length">Length</label><input type="text" inputmode="decimal" class="calc-input" data-calc="trench" data-field="length" data-unit="linear" /></div>
       </div>
       <div class="calc-result" id="result-trench">Enter dimensions</div>
       <button class="btn-ghost-sm calc-send" data-target="prod" data-source="trench">Send cu. yd. to Time Estimator ↓</button>
@@ -410,7 +423,83 @@
       <div class="modal-equip" id="modalEquip"></div>
       <p class="modal-note" id="modalNote"></p>
       <p class="modal-location" id="modalLocation"></p>
+      <button class="btn-ghost-sm" id="modalShareLocationBtn" type="button" hidden style="width:auto;padding:4px 0;">📤 Share location pin</button>
       <button class="btn-danger-sm" id="deleteEntryBtn">Delete entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-backdrop" id="settingsModal" hidden>
+  <div class="modal">
+    <button class="modal-close" id="closeSettingsBtn">✕</button>
+    <div class="modal-body">
+      <h2 class="card-title" style="margin-top:6px;">Settings</h2>
+
+      <div class="settings-section">
+        <div class="settings-label">App</div>
+        <div class="settings-row">
+          <span>GCI Progress Photos</span>
+          <span class="hint-text" style="margin:0;">v1.1</span>
+        </div>
+        <p class="hint-text">Installs to your home screen and works offline. Photos and logs are stored only on this device.</p>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-label">Measurement units</div>
+        <p class="hint-text" style="margin:0 0 8px;">Set in the Calc tab — applies to all grade/takeoff calculators.</p>
+        <button class="btn-ghost-sm" id="settingsGoToCalcBtn" type="button">Go to Calc tab units →</button>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-label">Updates</div>
+        <button class="btn-ghost-sm" id="checkUpdateBtn" type="button">🔄 Check for app updates</button>
+      </div>
+
+      <div class="settings-section settings-danger">
+        <div class="settings-label">Danger zone</div>
+        <p class="hint-text" style="margin:0 0 10px;">Each option below only touches what it says — pick the smallest one that fixes the problem. None of these can be undone.</p>
+
+        <div class="danger-item">
+          <div>
+            <div class="danger-item-title">Clear photo entries</div>
+            <div class="hint-text" style="margin:0;">Deletes every saved photo/progress entry. Job sites and equipment lists are kept.</div>
+          </div>
+          <button class="btn-danger-sm" id="clearEntriesBtn" type="button">Clear</button>
+        </div>
+
+        <div class="danger-item">
+          <div>
+            <div class="danger-item-title">Clear job sites</div>
+            <div class="hint-text" style="margin:0;">Removes the job site list. Past photo entries keep their job name on file.</div>
+          </div>
+          <button class="btn-danger-sm" id="clearJobsBtn" type="button">Clear</button>
+        </div>
+
+        <div class="danger-item">
+          <div>
+            <div class="danger-item-title">Reset equipment list</div>
+            <div class="hint-text" style="margin:0;">Removes any rentals you've added and restores the default GCI fleet list.</div>
+          </div>
+          <button class="btn-danger-sm" id="resetEquipmentBtn" type="button">Reset</button>
+        </div>
+
+        <div class="danger-item">
+          <div>
+            <div class="danger-item-title">Reset calculators</div>
+            <div class="hint-text" style="margin:0;">Clears every saved calculator input and puts units back to Decimal Feet.</div>
+          </div>
+          <button class="btn-danger-sm" id="resetCalcBtn" type="button">Reset</button>
+        </div>
+
+        <div class="danger-item danger-item-final">
+          <div>
+            <div class="danger-item-title">Clear everything</div>
+            <div class="hint-text" style="margin:0;">Wipes photo entries, job sites, equipment, and calculator settings — a full factory reset of this device's data.</div>
+          </div>
+          <button class="btn-danger-sm" id="clearDataBtn" type="button">Clear all</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>

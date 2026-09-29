@@ -260,7 +260,16 @@ textarea { resize: vertical; }
 
 .location-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .location-row .btn-ghost-sm { width: auto; padding: 8px 0; }
-.location-label { font-size: 12px; color: var(--gray-mid); }
+.location-label {
+  font-size: 12.5px;
+  color: var(--gray-mid);
+  white-space: pre-line;
+  line-height: 1.5;
+  margin: 4px 0 0;
+  user-select: text;
+  -webkit-user-select: text;
+}
+#shareLocationBtn { width: auto; padding: 6px 0; }
 
 .btn-primary {
   display: block;
@@ -507,7 +516,44 @@ textarea { resize: vertical; }
 .modal-equip { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
 
 .modal-note { font-size: 14px; line-height: 1.5; color: var(--near-black); white-space: pre-wrap; }
-.modal-location { font-size: 12px; color: var(--gray-mid); margin-top: 8px; }
+.modal-location { font-size: 12px; color: var(--gray-mid); margin-top: 8px; white-space: pre-line; line-height: 1.5; }
+
+.settings-section {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--gray-border-light);
+}
+.settings-section:last-child { border-bottom: none; padding-bottom: 0; }
+.settings-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gray-mid);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 8px;
+}
+.settings-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--near-black);
+  margin-bottom: 4px;
+}
+.settings-danger .settings-label { color: var(--alert-red); }
+
+.danger-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px dashed var(--gray-border);
+}
+.danger-item:first-of-type { border-top: none; }
+.danger-item-final { margin-top: 4px; border-top: 1.5px solid var(--alert-red); padding-top: 14px; }
+.danger-item-title { font-size: 13.5px; font-weight: 700; color: var(--near-black); margin-bottom: 2px; }
+.danger-item .btn-danger-sm { margin-top: 0; flex-shrink: 0; }
 
 .toast {
   position: fixed;

@@ -355,6 +355,61 @@ $("addJobQuick").addEventListener("click", async () => {
   toast("Job added");
 });
 
+const geocodeCache = new Map();
+
+async function reverseGeocode(lat, lng) {
+  const key = `${lat.toFixed(5)},${lng.toFixed(5)}`;
+  if (geocodeCache.has(key)) return geocodeCache.get(key);
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+      { headers: { Accept: "application/json" } }
+    );
+    if (!res.ok) throw new Error("geocode failed");
+    const data = await res.json();
+    const address = data && data.display_name ? data.display_name : null;
+    geocodeCache.set(key, address);
+    return address;
+  } catch (err) {
+    return null;
+  }
+}
+
+function locationDisplayText(loc) {
+  if (!loc) return "";
+  const coords = `${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}`;
+  return loc.address ? `${loc.address}\n${coords}` : coords;
+}
+
+function mapsLink(lat, lng) {
+  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+}
+
+async function shareLocationPin(loc) {
+  if (!loc) return;
+  const url = mapsLink(loc.lat, loc.lng);
+  const shareText = loc.address || `${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}`;
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: "Job Site Location", text: shareText, url });
+      return;
+    } catch (err) {
+      if (err && err.name === "AbortError") return;
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(`${shareText}\n${url}`);
+    toast("Location link copied to clipboard");
+  } catch (err) {
+    window.open(url, "_blank");
+  }
+}
+
+$("shareLocationBtn").addEventListener("click", () => shareLocationPin(state.location));
+$("modalShareLocationBtn").addEventListener("click", () => {
+  if (activeModalEntry) shareLocationPin(activeModalEntry.location);
+});
+
 $("addLocationBtn").addEventListener("click", () => {
   if (!navigator.geolocation) {
     toast("Location not supported on this device");
@@ -362,13 +417,21 @@ $("addLocationBtn").addEventListener("click", () => {
   }
   $("addLocationBtn").textContent = "📍 Getting location...";
   navigator.geolocation.getCurrentPosition(
-    (pos) => {
+    async (pos) => {
       state.location = {
         lat: pos.coords.latitude,
         lng: pos.coords.longitude,
+        address: null,
       };
-      $("locationLabel").textContent = `${state.location.lat.toFixed(5)}, ${state.location.lng.toFixed(5)}`;
+      $("locationLabel").textContent = `${locationDisplayText(state.location)} — looking up address...`;
       $("addLocationBtn").textContent = "📍 Location added";
+      $("shareLocationBtn").hidden = false;
+
+      const address = await reverseGeocode(state.location.lat, state.location.lng);
+      if (state.location) {
+        state.location.address = address;
+        $("locationLabel").textContent = locationDisplayText(state.location);
+      }
     },
     () => {
       toast("Couldn't get location — check permissions");
@@ -649,9 +712,23 @@ function openEntryModal(entry) {
     equipWrap.appendChild(tag);
   });
   $("modalNote").textContent = entry.note || "No notes added.";
-  $("modalLocation").textContent = entry.location
-    ? `📍 ${entry.location.lat.toFixed(5)}, ${entry.location.lng.toFixed(5)}`
-    : "";
+
+  if (entry.location) {
+    $("modalLocation").textContent = `📍 ${locationDisplayText(entry.location)}`;
+    $("modalShareLocationBtn").hidden = false;
+    if (!entry.location.address) {
+      reverseGeocode(entry.location.lat, entry.location.lng).then(async (address) => {
+        if (!address || activeModalEntry !== entry) return;
+        entry.location.address = address;
+        $("modalLocation").textContent = `📍 ${locationDisplayText(entry.location)}`;
+        await idbPut("entries", entry);
+      });
+    }
+  } else {
+    $("modalLocation").textContent = "";
+    $("modalShareLocationBtn").hidden = true;
+  }
+
   $("entryModal").hidden = false;
 }
 
@@ -753,14 +830,14 @@ function buildPrintArea(entries, filters) {
       const card = document.createElement("div");
       card.style.cssText = "border:1px solid #D9D9D9;border-radius:8px;padding:10px;break-inside:avoid;";
       const equipStr = (e.equipment || []).map((eq) => eq.name).join(", ") || "—";
-      const locStr = e.location ? `${e.location.lat.toFixed(5)}, ${e.location.lng.toFixed(5)}` : "—";
+      const locStr = e.location ? locationDisplayText(e.location).replace("\n", " — ") : "";
       card.innerHTML = `
         <img src="${blobUrlFor(e.id, e.photoBlob)}" style="width:100%;max-height:220px;object-fit:cover;border-radius:6px;margin-bottom:8px;" />
         <div style="font-weight:700;color:#7B1E1E;font-size:13px;">${escapeHtml(e.jobName)}</div>
         <div style="font-size:11px;color:#595959;margin-bottom:4px;">${fmtDateTime(e.timestamp)}</div>
         <div style="font-size:11px;margin-bottom:4px;"><strong>Equipment:</strong> ${escapeHtml(equipStr)}</div>
         ${e.note ? `<div style="font-size:11px;margin-bottom:4px;"><strong>Notes:</strong> ${escapeHtml(e.note)}</div>` : ""}
-        <div style="font-size:10px;color:#595959;">${locStr !== "—" ? "📍 " + locStr : ""}</div>
+        ${locStr ? `<div style="font-size:10px;color:#595959;">📍 ${escapeHtml(locStr)}</div>` : ""}
       `;
       grid.appendChild(card);
     });
@@ -994,11 +1071,12 @@ async function generateReportPdf(entries, filters) {
           doc.setFont("helvetica", "normal");
           doc.setFontSize(8);
           doc.setTextColor(89, 89, 89);
-          doc.text(
-            `GPS: ${e.location.lat.toFixed(5)}, ${e.location.lng.toFixed(5)}`,
-            textX,
-            Math.min(ty + 12, y + rowH - 10)
-          );
+          const coords = `${e.location.lat.toFixed(5)}, ${e.location.lng.toFixed(5)}`;
+          const rawLoc = e.location.address ? `Location: ${e.location.address} (${coords})` : `GPS: ${coords}`;
+          const locLinesFull = doc.splitTextToSize(rawLoc, textW);
+          const locLine =
+            locLinesFull.length > 1 ? locLinesFull[0].replace(/\s*\S*$/, "") + "…" : locLinesFull[0];
+          doc.text(locLine, textX, Math.min(ty + 12, y + rowH - 10));
         }
 
         y += rowH + 10;
@@ -1178,19 +1256,127 @@ $("addRentalBtn").addEventListener("click", async () => {
 /* ---------- Excavation calculators ---------- */
 
 const calcLastCY = { rect: null, elev: null, trench: null, grid: null };
-let gridReadings = [null, null, null, null, null];
+let gridReadings = [null, null, null, null, null]; // canonical feet values
+
+/* ---- Unit conversion (feet is the canonical internal unit) ---- */
+
+let calcUnitMode = "dft"; // dft | ftin | in | m
+const FT_PER_M = 3.28084;
+const SQFT_PER_SQM = 10.7639;
+
+const DIM_FIELD_LABELS = {
+  "rect:length": "Length",
+  "rect:width": "Width",
+  "rect:depth": "Depth",
+  "elev:existing": "Existing Elev.",
+  "elev:proposed": "Proposed Elev.",
+  "elev:area": "Area",
+  "trench:topWidth": "Top Width",
+  "trench:bottomWidth": "Bottom Width",
+  "trench:depth": "Depth",
+  "trench:length": "Length",
+  "grid:area": "Pad / Pond Area",
+};
+
+function unitSuffix(unitType, mode) {
+  if (unitType === "area") return mode === "m" ? "sq m" : "sq ft";
+  switch (mode) {
+    case "ftin":
+      return "ft-in";
+    case "in":
+      return "in";
+    case "m":
+      return "m";
+    default:
+      return "ft";
+  }
+}
+
+function parseLengthToFeet(raw, mode) {
+  if (raw === null || raw === undefined) return null;
+  const str = String(raw).trim();
+  if (str === "") return null;
+  if (mode === "ftin") {
+    const m = str.match(/^(-)?(\d+(?:\.\d+)?)\s*'?\s*(?:(\d+(?:\.\d+)?)\s*"?)?$/);
+    if (m) {
+      const sign = m[1] ? -1 : 1;
+      const ft = parseFloat(m[2]);
+      const inch = m[3] ? parseFloat(m[3]) : 0;
+      return sign * (ft + inch / 12);
+    }
+    const fallback = parseFloat(str);
+    return Number.isNaN(fallback) ? null : fallback;
+  }
+  const v = parseFloat(str);
+  if (Number.isNaN(v)) return null;
+  if (mode === "in") return v / 12;
+  if (mode === "m") return v * FT_PER_M;
+  return v; // dft
+}
+
+function parseAreaToSqFt(raw, mode) {
+  if (raw === null || raw === undefined) return null;
+  const str = String(raw).trim();
+  if (str === "") return null;
+  const v = parseFloat(str);
+  if (Number.isNaN(v)) return null;
+  return mode === "m" ? v * SQFT_PER_SQM : v;
+}
+
+function formatFeetForMode(feet, mode) {
+  if (feet === null || feet === undefined || Number.isNaN(feet)) return "";
+  if (mode === "in") return (feet * 12).toFixed(1);
+  if (mode === "m") return (feet / FT_PER_M).toFixed(2);
+  if (mode === "ftin") {
+    const sign = feet < 0 ? "-" : "";
+    let abs = Math.abs(feet);
+    let ft = Math.floor(abs);
+    let inch = Math.round((abs - ft) * 12 * 10) / 10;
+    if (inch >= 12) {
+      ft += 1;
+      inch = 0;
+    }
+    return `${sign}${ft}'${inch}"`;
+  }
+  return feet.toFixed(2); // dft
+}
+
+function formatSqFtForMode(sqft, mode) {
+  if (sqft === null || sqft === undefined || Number.isNaN(sqft)) return "";
+  return mode === "m" ? (sqft / SQFT_PER_SQM).toFixed(2) : sqft.toFixed(1);
+}
+
+function updateDimFieldLabelsAndPlaceholders() {
+  document.querySelectorAll(".calc-input[data-unit]").forEach((el) => {
+    const { calc, field, unit } = el.dataset;
+    const base = DIM_FIELD_LABELS[`${calc}:${field}`];
+    const suffix = unitSuffix(unit, calcUnitMode);
+    const label = document.getElementById(`lbl-${calc}-${field}`);
+    if (label && base) label.textContent = `${base} (${suffix})`;
+    el.placeholder = unit === "linear" && calcUnitMode === "ftin" ? "e.g. 12'6\"" : "";
+  });
+}
 
 function calcVal(name, field) {
   const el = document.querySelector(`.calc-input[data-calc="${name}"][data-field="${field}"]`);
   if (!el) return null;
   if (el.tagName === "SELECT") return el.value;
   if (el.value === "") return null;
+  const unitType = el.dataset.unit;
+  if (unitType === "linear") return parseLengthToFeet(el.value, calcUnitMode);
+  if (unitType === "area") return parseAreaToSqFt(el.value, calcUnitMode);
   const v = parseFloat(el.value);
   return Number.isNaN(v) ? null : v;
 }
 
 function setCalcResult(id, html) {
   $(id).innerHTML = html;
+}
+
+function roundClean(n, decimals = 2) {
+  if (n === null || n === undefined || Number.isNaN(n)) return "";
+  const factor = Math.pow(10, decimals);
+  return String(Math.round(n * factor) / factor);
 }
 
 function fmtCY(n) {
@@ -1240,9 +1426,9 @@ function updateRectIllustration(length, width, depth) {
   setAttr("rectDimDepthLine", "y2", boxY + boxH);
   setAttr("rectDimDepthTickB", "y1", boxY + boxH);
   setAttr("rectDimDepthTickB", "y2", boxY + boxH);
-  setText("rectDimLenLabel", length !== null ? `Length: ${length}'` : "Length: —");
-  setText("rectDimDepthLabel", depth !== null ? `Depth: ${Math.abs(depth)}'` : "Depth: —");
-  setText("rectDimWidthLabel", width !== null ? `Width (into page): ${width}'` : "Width (into page): —");
+  setText("rectDimLenLabel", length !== null ? `Length: ${roundClean(length)}'` : "Length: —");
+  setText("rectDimDepthLabel", depth !== null ? `Depth: ${roundClean(Math.abs(depth))}'` : "Depth: —");
+  setText("rectDimWidthLabel", width !== null ? `Width (into page): ${roundClean(width)}'` : "Width (into page): —");
 }
 
 function computeRect() {
@@ -1259,7 +1445,7 @@ function computeRect() {
   calcLastCY.rect = cy;
   setCalcResult(
     "result-rect",
-    `<span class="big">${fmtCY(cy)} cu. yd.</span><span class="muted">${length}' × ${width}' × ${Math.abs(depth)}' ÷ 27</span>`
+    `<span class="big">${fmtCY(cy)} cu. yd.</span><span class="muted">${roundClean(length)}' × ${roundClean(width)}' × ${roundClean(Math.abs(depth))}' ÷ 27</span>`
   );
 }
 
@@ -1334,9 +1520,9 @@ function updateTrenchIllustration(topWidth, bottomWidth, depth) {
   setAttr("trenchDepthLine", "y2", botY);
   setAttr("trenchDepthTickB", "y1", botY);
   setAttr("trenchDepthTickB", "y2", botY);
-  setText("trenchTopLabel", topWidth !== null ? `Top width: ${topWidth}'` : "Top width: —");
-  setText("trenchBottomLabel", bottomWidth !== null ? `Bottom width: ${bottomWidth}'` : "Bottom width: —");
-  setText("trenchDepthLabel", depth !== null ? `Depth: ${depth}'` : "Depth: —");
+  setText("trenchTopLabel", topWidth !== null ? `Top width: ${roundClean(topWidth)}'` : "Top width: —");
+  setText("trenchBottomLabel", bottomWidth !== null ? `Bottom width: ${roundClean(bottomWidth)}'` : "Bottom width: —");
+  setText("trenchDepthLabel", depth !== null ? `Depth: ${roundClean(depth)}'` : "Depth: —");
 }
 
 function computeTrench() {
@@ -1345,7 +1531,7 @@ function computeTrench() {
   const depth = calcVal("trench", "depth");
   const length = calcVal("trench", "length");
   updateTrenchIllustration(topWidth, bottomWidth, depth);
-  setText("trenchLengthLabel", length !== null ? `Run length: ${length}'` : "Run length: —");
+  setText("trenchLengthLabel", length !== null ? `Run length: ${roundClean(length)}'` : "Run length: —");
   if (topWidth === null || bottomWidth === null || depth === null || length === null) {
     calcLastCY.trench = null;
     setCalcResult("result-trench", "Enter dimensions");
@@ -1356,7 +1542,7 @@ function computeTrench() {
   calcLastCY.trench = cy;
   setCalcResult(
     "result-trench",
-    `<span class="big">${fmtCY(cy)} cu. yd.</span><span class="muted">Avg end area ${area.toFixed(2)} sq ft × ${length}' ÷ 27</span>`
+    `<span class="big">${fmtCY(cy)} cu. yd.</span><span class="muted">Avg end area ${area.toFixed(2)} sq ft × ${roundClean(length)}' ÷ 27</span>`
   );
 }
 
@@ -1384,13 +1570,12 @@ function renderGridReadings() {
     row.appendChild(label);
 
     const input = document.createElement("input");
-    input.type = "number";
+    input.type = "text";
     input.inputMode = "decimal";
-    input.placeholder = "ft";
-    input.value = val === null ? "" : val;
+    input.placeholder = calcUnitMode === "ftin" ? "e.g. 2'6\"" : unitSuffix("linear", calcUnitMode);
+    input.value = val === null ? "" : formatFeetForMode(val, calcUnitMode);
     input.addEventListener("input", () => {
-      const v = input.value === "" ? null : parseFloat(input.value);
-      gridReadings[i] = Number.isNaN(v) ? null : v;
+      gridReadings[i] = parseLengthToFeet(input.value, calcUnitMode);
       persistGridReadings();
       computeGrid();
     });
@@ -1597,7 +1782,45 @@ document.querySelectorAll(".calc-send").forEach((btn) => {
   });
 });
 
+$("calcUnitMode").addEventListener("change", () => {
+  const oldMode = calcUnitMode;
+  const newMode = $("calcUnitMode").value;
+
+  document.querySelectorAll(".calc-input[data-unit]").forEach((el) => {
+    if (el.value === "") return;
+    const unitType = el.dataset.unit;
+    if (unitType === "linear") {
+      const feet = parseLengthToFeet(el.value, oldMode);
+      el.value = feet === null ? "" : formatFeetForMode(feet, newMode);
+    } else if (unitType === "area") {
+      const sqft = parseAreaToSqFt(el.value, oldMode);
+      el.value = sqft === null ? "" : formatSqFtForMode(sqft, newMode);
+    }
+    try {
+      localStorage.setItem(`gci_calc_${el.dataset.calc}_${el.dataset.field}`, el.value);
+    } catch (e) {}
+  });
+
+  calcUnitMode = newMode;
+  try {
+    localStorage.setItem("gci_calc_unit_mode", newMode);
+  } catch (e) {}
+
+  updateDimFieldLabelsAndPlaceholders();
+  renderGridReadings();
+  Object.values(CALC_FNS).forEach((fn) => fn());
+});
+
 function restoreCalcInputs() {
+  try {
+    const storedMode = localStorage.getItem("gci_calc_unit_mode");
+    if (storedMode && ["dft", "ftin", "in", "m"].includes(storedMode)) {
+      calcUnitMode = storedMode;
+      $("calcUnitMode").value = storedMode;
+    }
+  } catch (e) {}
+  updateDimFieldLabelsAndPlaceholders();
+
   document.querySelectorAll(".calc-input").forEach((el) => {
     const { calc, field } = el.dataset;
     let stored = null;
@@ -1901,24 +2124,87 @@ $("printCalcBtn").addEventListener("click", () => {
   window.print();
 });
 
-/* ---------- Settings (clear data) ---------- */
+/* ---------- Settings modal ---------- */
 
-$("settingsBtn").addEventListener("click", async () => {
+$("settingsBtn").addEventListener("click", () => {
+  $("settingsModal").hidden = false;
+});
+
+$("closeSettingsBtn").addEventListener("click", () => {
+  $("settingsModal").hidden = true;
+});
+
+$("settingsModal").addEventListener("click", (e) => {
+  if (e.target.id === "settingsModal") $("settingsModal").hidden = true;
+});
+
+$("settingsGoToCalcBtn").addEventListener("click", () => {
+  $("settingsModal").hidden = true;
+  switchTab("calc");
+});
+
+$("checkUpdateBtn").addEventListener("click", async () => {
+  if (!("serviceWorker" in navigator)) {
+    toast("This browser doesn't support offline updates");
+    return;
+  }
+  const reg = await navigator.serviceWorker.getRegistration();
+  if (reg) await reg.update();
+  toast("Checked for updates — reloading...");
+  setTimeout(() => location.reload(), 800);
+});
+
+function clearStores(storeNames) {
+  return openDB().then(
+    (db) =>
+      new Promise((resolve, reject) => {
+        const tx = db.transaction(storeNames, "readwrite");
+        storeNames.forEach((name) => tx.objectStore(name).clear());
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      })
+  );
+}
+
+function clearLocalStorageCalcKeys() {
+  try {
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith("gci_calc_"))
+      .forEach((k) => localStorage.removeItem(k));
+  } catch (e) {}
+}
+
+$("clearEntriesBtn").addEventListener("click", async () => {
+  if (!confirm("Delete ALL saved photo entries? Job sites and equipment lists are kept.\n\nThis cannot be undone.")) return;
+  await clearStores(["entries"]);
+  location.reload();
+});
+
+$("clearJobsBtn").addEventListener("click", async () => {
+  if (!confirm("Delete the job site list? Existing photo entries keep their job name on file.\n\nThis cannot be undone.")) return;
+  await clearStores(["jobs"]);
+  location.reload();
+});
+
+$("resetEquipmentBtn").addEventListener("click", async () => {
+  if (!confirm("Remove all equipment (including any rentals you've added) and restore the default GCI fleet list?\n\nThis cannot be undone.")) return;
+  await clearStores(["equipment"]);
+  location.reload();
+});
+
+$("resetCalcBtn").addEventListener("click", () => {
+  if (!confirm("Clear every saved calculator input and reset units to Decimal Feet?\n\nThis cannot be undone.")) return;
+  clearLocalStorageCalcKeys();
+  location.reload();
+});
+
+$("clearDataBtn").addEventListener("click", async () => {
   const choice = confirm(
-    "Clear ALL saved photos, jobs, and equipment from this device? This cannot be undone.\n\nPress OK to clear, Cancel to go back."
+    "Clear ALL saved photos, jobs, equipment, and calculator settings from this device? This cannot be undone.\n\nPress OK to clear, Cancel to go back."
   );
   if (!choice) return;
-  const db = await openDB();
-  await Promise.all(
-    ["jobs", "equipment", "entries"].map(
-      (store) =>
-        new Promise((resolve, reject) => {
-          const req = db.transaction(store, "readwrite").objectStore(store).clear();
-          req.onsuccess = () => resolve();
-          req.onerror = () => reject(req.error);
-        })
-    )
-  );
+  await clearStores(["jobs", "equipment", "entries"]);
+  clearLocalStorageCalcKeys();
   location.reload();
 });
 
