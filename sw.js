@@ -1,4 +1,4 @@
-const CACHE = "gci-progress-photos-v3";
+const CACHE = "gci-progress-photos-v4";
 const SHELL = [
   "./",
   "index.html",
