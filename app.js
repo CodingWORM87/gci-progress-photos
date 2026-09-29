@@ -1552,6 +1552,11 @@ function updateElevIllustration(existing, proposed, area) {
   const fillEl = document.getElementById("elevFillArea");
   if (fillEl) fillEl.setAttribute("fill", isFill ? "url(#fillHatch)" : "url(#cutHatch)");
 
+  // Native ground always sits below whichever line is lower on screen —
+  // the original grade when filling, the newly cut grade when cutting.
+  setAttr("elevGroundArea", "y", fillBottom);
+  setAttr("elevGroundArea", "height", 130 - fillBottom);
+
   setText("elevDepthLabel", hasAll ? `${isFill ? "Fill" : "Cut"}: ${Math.abs(depth).toFixed(2)}'` : "Depth: —");
   setText("elevAreaLabel", area !== null ? `Area: ${area} sq ft` : "Area: —");
 }
