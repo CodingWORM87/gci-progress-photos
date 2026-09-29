@@ -375,9 +375,30 @@
           <text id="isoBottomLabel" x="14" y="56" font-size="10.5" font-weight="700" fill="#1F3864">Bottom width: —</text>
         </svg>
       </div>
-      <div class="calc-grid">
+      <div class="view-toggle">
+        <button class="view-toggle-btn active" id="trenchWidthBothBtn" type="button">↕️ Enter Both Widths</button>
+        <button class="view-toggle-btn" id="trenchWidthSlopeBtn" type="button">📐 Reference + Slope</button>
+      </div>
+
+      <div class="calc-grid" id="trenchBothWidthFields">
         <div class="field"><label id="lbl-trench-topWidth">Top Width</label><input type="text" inputmode="decimal" class="calc-input" data-calc="trench" data-field="topWidth" data-unit="linear" /></div>
         <div class="field"><label id="lbl-trench-bottomWidth">Bottom Width</label><input type="text" inputmode="decimal" class="calc-input" data-calc="trench" data-field="bottomWidth" data-unit="linear" /></div>
+      </div>
+      <div class="calc-grid" id="trenchSlopeWidthFields" hidden>
+        <div class="field">
+          <label id="lbl-trench-refWidth">Narrow-End Width</label>
+          <input type="text" inputmode="decimal" class="calc-input" data-calc="trench" data-field="refWidth" data-unit="linear" />
+          <p class="hint-text" style="margin:4px 0 0;">Trench floor width (cut) or fill crown width (fill) — the narrow end.</p>
+        </div>
+        <div class="field">
+          <label>Side Slope (H:V)</label>
+          <input type="number" inputmode="decimal" step="0.1" class="calc-input" data-calc="trench" data-field="slopeRatio" placeholder="e.g. 1.5 = 1.5:1" />
+          <p class="hint-text" style="margin:4px 0 0;">Typical: 1.5:1 to 2:1 for loose soil, 1:1 for stable clay.</p>
+        </div>
+      </div>
+      <p class="hint-text" id="trenchSlopeInfo"></p>
+
+      <div class="calc-grid">
         <div class="field"><label id="lbl-trench-depth">Depth</label><input type="text" inputmode="decimal" class="calc-input" data-calc="trench" data-field="depth" data-unit="linear" /></div>
         <div class="field"><label id="lbl-trench-length">Length</label><input type="text" inputmode="decimal" class="calc-input" data-calc="trench" data-field="length" data-unit="linear" /></div>
       </div>
@@ -402,6 +423,18 @@
           <text x="220" y="118" text-anchor="middle" font-size="10.5" font-weight="700" fill="#7B1E1E">COMPACTED</text>
           <text id="swellCompactedVal" x="220" y="40" text-anchor="middle" font-size="10" font-weight="700" fill="#7B1E1E">—</text>
         </svg>
+      </div>
+      <div class="field">
+        <label>Soil Type</label>
+        <select class="calc-input" data-calc="swell" data-field="soilPreset" id="swellSoilPreset">
+          <option value="custom">Custom...</option>
+          <option value="25,10">Common Earth / Loam (25% swell, 10% shrink)</option>
+          <option value="35,10">Clay (35% swell, 10% shrink)</option>
+          <option value="15,5">Sand (15% swell, 5% shrink)</option>
+          <option value="12,5">Gravel (12% swell, 5% shrink)</option>
+          <option value="25,15">Topsoil (25% swell, 15% shrink)</option>
+          <option value="50,0">Rock, Blasted (50% swell, 0% shrink)</option>
+        </select>
       </div>
       <div class="calc-grid">
         <div class="field"><label>Bank Cu. Yd.</label><input type="number" inputmode="decimal" class="calc-input" data-calc="swell" data-field="bankCY" /></div>

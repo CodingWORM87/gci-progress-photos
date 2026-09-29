@@ -1715,10 +1715,61 @@ $("trenchViewIsoBtn").addEventListener("click", () => {
   $("trenchSideView").hidden = true;
 });
 
+let trenchWidthMode = "both"; // "both" | "slope"
+
+function updateTrenchWidthModeUI() {
+  const isSlope = trenchWidthMode === "slope";
+  $("trenchWidthBothBtn").classList.toggle("active", !isSlope);
+  $("trenchWidthSlopeBtn").classList.toggle("active", isSlope);
+  $("trenchBothWidthFields").hidden = isSlope;
+  $("trenchSlopeWidthFields").hidden = !isSlope;
+}
+
+$("trenchWidthBothBtn").addEventListener("click", () => {
+  trenchWidthMode = "both";
+  try {
+    localStorage.setItem("gci_trench_width_mode", trenchWidthMode);
+  } catch (e) {}
+  updateTrenchWidthModeUI();
+  computeTrench();
+});
+$("trenchWidthSlopeBtn").addEventListener("click", () => {
+  trenchWidthMode = "slope";
+  try {
+    localStorage.setItem("gci_trench_width_mode", trenchWidthMode);
+  } catch (e) {}
+  updateTrenchWidthModeUI();
+  computeTrench();
+});
+
+// Resolves the narrow/wide widths for the current mode into the same
+// {topWidth, bottomWidth} shape the drawing/math code already expects —
+// topWidth is always the physically-top edge, bottomWidth the physically-
+// bottom edge, so a fill's crown (narrow) never ends up wider than its base.
+function resolveTrenchWidths(depth) {
+  if (trenchWidthMode !== "slope") {
+    return { topWidth: calcVal("trench", "topWidth"), bottomWidth: calcVal("trench", "bottomWidth") };
+  }
+  const refWidth = calcVal("trench", "refWidth");
+  const slopeRatio = calcVal("trench", "slopeRatio");
+  if (refWidth === null || slopeRatio === null || depth === null) {
+    setText("trenchSlopeInfo", "");
+    return { topWidth: null, bottomWidth: null };
+  }
+  const wideWidth = refWidth + 2 * slopeRatio * Math.abs(depth);
+  const isFill = depth >= 0;
+  const pct = slopeRatio > 0 ? (100 / slopeRatio).toFixed(1) : "0";
+  const deg = slopeRatio > 0 ? (Math.atan(1 / slopeRatio) * (180 / Math.PI)).toFixed(1) : "90";
+  setText(
+    "trenchSlopeInfo",
+    `${slopeRatio}:1 ≈ ${pct}% slope, ${deg}° from horizontal — computed ${isFill ? "base" : "opening"} width: ${roundClean(wideWidth)}'`
+  );
+  return isFill ? { topWidth: refWidth, bottomWidth: wideWidth } : { topWidth: wideWidth, bottomWidth: refWidth };
+}
+
 function computeTrench() {
-  const topWidth = calcVal("trench", "topWidth");
-  const bottomWidth = calcVal("trench", "bottomWidth");
   const depth = calcVal("trench", "depth");
+  const { topWidth, bottomWidth } = resolveTrenchWidths(depth);
   const length = calcVal("trench", "length");
   updateTrenchIllustration(topWidth, bottomWidth, depth);
   updateTrenchIsoIllustration(topWidth, bottomWidth, depth, length);
@@ -1897,6 +1948,21 @@ $("truckDensityPreset").addEventListener("change", () => {
     localStorage.setItem("gci_calc_truck_density", densityInput.value);
   } catch (e) {}
   computeTruck();
+});
+
+$("swellSoilPreset").addEventListener("change", () => {
+  const preset = $("swellSoilPreset").value;
+  if (preset === "custom") return;
+  const [swellPct, shrinkPct] = preset.split(",");
+  const swellInput = document.querySelector('.calc-input[data-calc="swell"][data-field="swellPct"]');
+  const shrinkInput = document.querySelector('.calc-input[data-calc="swell"][data-field="shrinkPct"]');
+  swellInput.value = swellPct;
+  shrinkInput.value = shrinkPct;
+  try {
+    localStorage.setItem("gci_calc_swell_swellPct", swellPct);
+    localStorage.setItem("gci_calc_swell_shrinkPct", shrinkPct);
+  } catch (e) {}
+  computeSwell();
 });
 
 function updateSwellIllustration(bankCY, swellPct, compactedCY, looseCY) {
@@ -2117,6 +2183,14 @@ function restoreCalcInputs() {
   } catch (e) {}
   updateDimFieldLabelsAndPlaceholders();
 
+  try {
+    const storedTrenchMode = localStorage.getItem("gci_trench_width_mode");
+    if (storedTrenchMode === "slope" || storedTrenchMode === "both") {
+      trenchWidthMode = storedTrenchMode;
+    }
+  } catch (e) {}
+  updateTrenchWidthModeUI();
+
   document.querySelectorAll(".calc-input").forEach((el) => {
     const { calc, field } = el.dataset;
     let stored = null;
@@ -2170,17 +2244,21 @@ function getCalcSectionsForPdf() {
     });
   }
 
-  const topWidth = calcVal("trench", "topWidth");
-  const bottomWidth = calcVal("trench", "bottomWidth");
   const tDepth = calcVal("trench", "depth");
+  const { topWidth, bottomWidth } = resolveTrenchWidths(tDepth);
   const tLength = calcVal("trench", "length");
   if (topWidth !== null && bottomWidth !== null && tDepth !== null && tLength !== null) {
-    const area = ((topWidth + bottomWidth) / 2) * tDepth;
+    const area = ((topWidth + bottomWidth) / 2) * Math.abs(tDepth);
     const cy = (area * tLength) / 27;
+    const tLabel = tDepth >= 0 ? "Fill" : "Cut";
+    const tLines = [`Top Width: ${roundClean(topWidth)} ft`, `Bottom Width: ${roundClean(bottomWidth)} ft`, `Depth: ${roundClean(Math.abs(tDepth))} ft`, `Length: ${tLength} ft`];
+    if (trenchWidthMode === "slope") {
+      tLines.push(`Slope mode: ${calcVal("trench", "refWidth")} ft reference @ ${calcVal("trench", "slopeRatio")}:1`);
+    }
     sections.push({
       title: "Trench / Linear Cross-Section",
-      lines: [`Top Width: ${topWidth} ft`, `Bottom Width: ${bottomWidth} ft`, `Depth: ${tDepth} ft`, `Length: ${tLength} ft`],
-      result: `${fmtCY(cy)} cu. yd.`,
+      lines: tLines,
+      result: `${tLabel}: ${fmtCY(cy)} cu. yd.`,
     });
   }
 
@@ -2207,11 +2285,16 @@ function getCalcSectionsForPdf() {
   if (bankCY !== null) {
     const swellPct = calcVal("swell", "swellPct") || 0;
     const shrinkPct = calcVal("swell", "shrinkPct") || 0;
+    const soilPresetEl = document.getElementById("swellSoilPreset");
+    const soilLabel =
+      soilPresetEl && soilPresetEl.value !== "custom"
+        ? soilPresetEl.options[soilPresetEl.selectedIndex].textContent
+        : "Custom";
     const looseCY = bankCY * (1 + swellPct / 100);
     const compactedCY = bankCY * (1 - shrinkPct / 100);
     sections.push({
       title: "Bank / Loose / Compacted Conversion",
-      lines: [`Bank: ${fmtCY(bankCY)} CY`, `Swell %: ${swellPct}%`, `Shrink %: ${shrinkPct}%`],
+      lines: [`Soil Type: ${soilLabel}`, `Bank: ${fmtCY(bankCY)} CY`, `Swell %: ${swellPct}%`, `Shrink %: ${shrinkPct}%`],
       result: `${fmtCY(looseCY)} CY loose · ${fmtCY(compactedCY)} CY compacted`,
     });
   }
