@@ -2105,31 +2105,51 @@ function computeSwell() {
   );
 }
 
-function updateTruckIllustration(loads) {
-  const row = document.getElementById("truckIconRow");
-  const overflowLabel = document.getElementById("truckOverflowLabel");
-  if (!row) return;
-  row.innerHTML = "";
-  if (!loads || loads <= 0) {
-    overflowLabel.textContent = "";
+let truckLoadsNeeded = null;
+let truckCounterValue = 0;
+
+function updateTruckCounterProgress() {
+  $("truckCounterValue").textContent = truckCounterValue;
+  const progressEl = $("truckCounterProgress");
+  if (!truckLoadsNeeded || truckLoadsNeeded <= 0) {
+    progressEl.textContent = "Enter a total above to track progress";
     return;
   }
-  const maxIcons = 10;
-  const shown = Math.min(loads, maxIcons);
-  const spacing = 26;
-  for (let i = 0; i < shown; i++) {
-    const x = 20 + i * spacing;
-    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    g.setAttribute("transform", `translate(${x},30)`);
-    g.innerHTML =
-      '<rect x="0" y="8" width="16" height="10" rx="1.5" fill="#1F3864"/>' +
-      '<rect x="14" y="4" width="8" height="14" rx="1.5" fill="#7B1E1E"/>' +
-      '<circle cx="4" cy="19" r="2.5" fill="#3A3A3A"/>' +
-      '<circle cx="17" cy="19" r="2.5" fill="#3A3A3A"/>';
-    row.appendChild(g);
-  }
-  overflowLabel.textContent = loads > maxIcons ? `+${loads - maxIcons} more` : "";
+  const pct = Math.min(Math.round((truckCounterValue / truckLoadsNeeded) * 100), 100);
+  const remaining = Math.max(truckLoadsNeeded - truckCounterValue, 0);
+  progressEl.textContent =
+    truckCounterValue >= truckLoadsNeeded
+      ? `Done — ${truckLoadsNeeded} of ${truckLoadsNeeded} loads (100%)`
+      : `${truckCounterValue} of ${truckLoadsNeeded} loads (${pct}%) — ${remaining} to go`;
 }
+
+function updateTruckIllustration(loads) {
+  truckLoadsNeeded = loads && loads > 0 ? loads : null;
+  updateTruckCounterProgress();
+}
+
+$("truckCounterPlus").addEventListener("click", () => {
+  truckCounterValue += 1;
+  try {
+    localStorage.setItem("gci_truck_counter", String(truckCounterValue));
+  } catch (e) {}
+  updateTruckCounterProgress();
+});
+$("truckCounterMinus").addEventListener("click", () => {
+  truckCounterValue = Math.max(truckCounterValue - 1, 0);
+  try {
+    localStorage.setItem("gci_truck_counter", String(truckCounterValue));
+  } catch (e) {}
+  updateTruckCounterProgress();
+});
+$("truckCounterReset").addEventListener("click", () => {
+  if (truckCounterValue > 0 && !confirm("Reset the truck counter back to 0?")) return;
+  truckCounterValue = 0;
+  try {
+    localStorage.setItem("gci_truck_counter", "0");
+  } catch (e) {}
+  updateTruckCounterProgress();
+});
 
 function computeTruck() {
   const totalCY = calcVal("truck", "totalCY");
@@ -2320,7 +2340,13 @@ function restoreCalcInputs() {
   renderGridReadings();
   updateTruckFieldVisibility();
 
+  try {
+    const storedCounter = parseInt(localStorage.getItem("gci_truck_counter"), 10);
+    if (!Number.isNaN(storedCounter) && storedCounter >= 0) truckCounterValue = storedCounter;
+  } catch (e) {}
+
   Object.values(CALC_FNS).forEach((fn) => fn());
+  updateTruckCounterProgress();
 }
 
 /* ---------- Calc Sheet PDF / Print ---------- */

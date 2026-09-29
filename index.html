@@ -471,13 +471,16 @@
 
     <div class="card calc-card">
       <h2 class="card-title">Truck Loads Needed</h2>
-      <p class="hint-text hint-top">One icon per load — updates as you type. Works for dump trucks rated by volume or off-road haul trucks rated by tons.</p>
-      <div class="calc-illustration">
-        <svg viewBox="0 0 300 90" xmlns="http://www.w3.org/2000/svg">
-          <rect x="0" y="0" width="300" height="90" fill="url(#cadGridMajor)"/>
-          <g id="truckIconRow"></g>
-          <text id="truckOverflowLabel" x="290" y="55" text-anchor="end" font-size="12" font-weight="700" fill="#7B1E1E"></text>
-        </svg>
+      <p class="hint-text hint-top">Updates as you type. Works for dump trucks rated by volume or off-road haul trucks rated by tons.</p>
+      <div class="truck-counter">
+        <div class="truck-counter-label">Trucks Loaded So Far</div>
+        <div class="truck-counter-row">
+          <button class="truck-counter-btn" id="truckCounterMinus" type="button">−</button>
+          <div class="truck-counter-value" id="truckCounterValue">0</div>
+          <button class="truck-counter-btn" id="truckCounterPlus" type="button">+</button>
+        </div>
+        <div class="hint-text" id="truckCounterProgress" style="margin:6px 0 0;">Enter a total above to track progress</div>
+        <button class="btn-ghost-sm" id="truckCounterReset" type="button">Reset counter to 0</button>
       </div>
       <div class="calc-grid">
         <div class="field"><label>Total Cu. Yd. to Haul</label><input type="number" inputmode="decimal" class="calc-input" data-calc="truck" data-field="totalCY" /></div>
