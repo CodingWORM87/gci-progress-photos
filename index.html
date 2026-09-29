@@ -18,6 +18,34 @@
 </head>
 <body>
 
+<!-- Shared CAD-drafting-style SVG defs, referenced by url(#id) from every calculator diagram -->
+<svg width="0" height="0" style="position:absolute;" aria-hidden="true">
+  <defs>
+    <pattern id="cadGrid" width="10" height="10" patternUnits="userSpaceOnUse">
+      <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#D9D9D9" stroke-width="0.5"/>
+    </pattern>
+    <pattern id="cadGridMajor" width="300" height="300" patternUnits="userSpaceOnUse">
+      <rect width="300" height="300" fill="#FBFAF8"/>
+      <rect width="300" height="300" fill="url(#cadGrid)"/>
+      <path d="M 50 0 L 50 300 M 100 0 L 100 300 M 150 0 L 150 300 M 200 0 L 200 300 M 250 0 L 250 300 M 0 50 L 300 50 M 0 100 L 300 100 M 0 150 L 300 150 M 0 200 L 300 200 M 0 250 L 300 250" stroke="#BFBFBF" stroke-width="0.6"/>
+    </pattern>
+    <pattern id="fillHatch" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+      <rect width="7" height="7" fill="#FBEEEA"/>
+      <line x1="0" y1="0" x2="0" y2="7" stroke="#7B1E1E" stroke-width="1.3"/>
+    </pattern>
+    <pattern id="cutHatch" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+      <rect width="7" height="7" fill="#EAF0F8"/>
+      <line x1="0" y1="0" x2="0" y2="7" stroke="#1F3864" stroke-width="1.3"/>
+    </pattern>
+    <marker id="cadArrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,1 L7,4 L0,7 Z" fill="#262626"/>
+    </marker>
+    <marker id="cadArrowStart" markerWidth="8" markerHeight="8" refX="1" refY="4" orient="auto-start-reverse">
+      <path d="M0,1 L7,4 L0,7 Z" fill="#262626"/>
+    </marker>
+  </defs>
+</svg>
+
 <header class="app-header">
   <div class="header-brand">
     <div class="header-logo-badge"><img src="logo.svg" alt="Gilbert Construction L.L.C." class="header-logo" /></div>
@@ -190,21 +218,39 @@
 
     <div class="card calc-card">
       <h2 class="card-title">Rectangular Cut / Fill Volume</h2>
-      <p class="hint-text hint-top">Side profile — updates as you type.</p>
-      <div class="calc-illustration">
+      <p class="hint-text hint-top">Positive depth = fill (drawn above grade). Negative depth = cut (drawn below grade).</p>
+      <div class="view-toggle">
+        <button class="view-toggle-btn active" id="rectViewSideBtn" type="button">📐 Side Profile</button>
+        <button class="view-toggle-btn" id="rectViewIsoBtn" type="button">📦 Isometric</button>
+      </div>
+      <div class="calc-illustration" id="rectSideView">
         <svg viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="300" height="150" fill="url(#cadGridMajor)"/>
           <line x1="20" y1="50" x2="280" y2="50" stroke="#595959" stroke-width="1" stroke-dasharray="3,3"/>
           <text x="24" y="42" font-size="10" fill="#595959">GRADE</text>
-          <rect id="rectIllusBox" x="90" y="50" width="120" height="50" fill="#1F3864" stroke="#3A3A3A" stroke-width="1.5"/>
-          <line id="rectDimLenLine" x1="90" y1="112" x2="210" y2="112" stroke="#7B1E1E" stroke-width="1.5"/>
+          <rect id="rectIllusBox" x="90" y="50" width="120" height="50" fill="url(#cutHatch)" stroke="#3A3A3A" stroke-width="1.5"/>
+          <line id="rectDimLenLine" x1="90" y1="112" x2="210" y2="112" stroke="#262626" stroke-width="1" marker-start="url(#cadArrowStart)" marker-end="url(#cadArrow)"/>
           <line id="rectDimLenTickA" x1="90" y1="107" x2="90" y2="117" stroke="#7B1E1E" stroke-width="1.5"/>
           <line id="rectDimLenTickB" x1="210" y1="107" x2="210" y2="117" stroke="#7B1E1E" stroke-width="1.5"/>
           <text id="rectDimLenLabel" x="150" y="128" text-anchor="middle" font-size="12" font-weight="700" fill="#7B1E1E">Length: —</text>
-          <line id="rectDimDepthLine" x1="70" y1="50" x2="70" y2="100" stroke="#1F3864" stroke-width="1.5"/>
+          <line id="rectDimDepthLine" x1="70" y1="50" x2="70" y2="100" stroke="#262626" stroke-width="1" marker-start="url(#cadArrowStart)" marker-end="url(#cadArrow)"/>
           <line x1="65" y1="50" x2="75" y2="50" stroke="#1F3864" stroke-width="1.5"/>
           <line id="rectDimDepthTickB" x1="65" y1="100" x2="75" y2="100" stroke="#1F3864" stroke-width="1.5"/>
           <text id="rectDimDepthLabel" x="55" y="78" text-anchor="middle" font-size="12" font-weight="700" fill="#1F3864" transform="rotate(-90 55 78)">Depth: —</text>
           <text id="rectDimWidthLabel" x="150" y="145" text-anchor="middle" font-size="11" font-weight="700" fill="#5A1414">Width (into page): —</text>
+        </svg>
+      </div>
+      <div class="calc-illustration" id="rectIsoView" hidden>
+        <svg viewBox="0 0 300 170" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="300" height="170" fill="url(#cadGridMajor)"/>
+          <polygon id="isoFloorRect" points="" fill="#E2E2E2" stroke="#262626" stroke-width="1.2"/>
+          <polygon id="isoWallLeftRect" points="" fill="#C6C6C6" stroke="#262626" stroke-width="1.2"/>
+          <polygon id="isoWallRightRect" points="" fill="#F2F2F2" stroke="#262626" stroke-width="1.2"/>
+          <line id="isoGradeFrontRect" x1="0" y1="0" x2="0" y2="0" stroke="#595959" stroke-width="1" stroke-dasharray="3,3"/>
+          <line id="isoGradeBackRect" x1="0" y1="0" x2="0" y2="0" stroke="#595959" stroke-width="1" stroke-dasharray="3,3"/>
+          <text id="isoLenLabelRect" x="14" y="14" font-size="10.5" font-weight="700" fill="#7B1E1E">Length: —</text>
+          <text id="isoDepthLabelRect" x="14" y="28" font-size="10.5" font-weight="700" fill="#1F3864">Depth: —</text>
+          <text id="isoWidthLabelRect" x="14" y="42" font-size="10.5" font-weight="700" fill="#5A1414">Width: —</text>
         </svg>
       </div>
       <div class="calc-grid">
@@ -218,19 +264,37 @@
 
     <div class="card calc-card">
       <h2 class="card-title">Depth from Elevations</h2>
-      <p class="hint-text hint-top">Existing minus proposed. Positive = cut, negative = fill. Side profile — updates as you type.</p>
-      <div class="calc-illustration">
+      <p class="hint-text hint-top">Existing minus proposed. Positive = cut, negative = fill. Updates as you type.</p>
+      <div class="view-toggle">
+        <button class="view-toggle-btn active" id="elevViewSideBtn" type="button">📐 Side Profile</button>
+        <button class="view-toggle-btn" id="elevViewIsoBtn" type="button">📦 Isometric</button>
+      </div>
+      <div class="calc-illustration" id="elevSideView">
         <svg viewBox="0 0 300 130" xmlns="http://www.w3.org/2000/svg">
-          <polygon id="elevFillArea" points="40,40 260,40 260,90 40,90" fill="#7B1E1E" fill-opacity="0.18"/>
+          <rect x="0" y="0" width="300" height="130" fill="url(#cadGridMajor)"/>
+          <polygon id="elevFillArea" points="40,40 260,40 260,90 40,90" fill="url(#cutHatch)" stroke="#262626" stroke-width="1"/>
           <line id="elevExistingLine" x1="40" y1="40" x2="260" y2="40" stroke="#3A3A3A" stroke-width="2" stroke-dasharray="6,4"/>
           <text x="44" y="32" font-size="11" font-weight="700" fill="#3A3A3A">EXISTING</text>
           <line id="elevProposedLine" x1="40" y1="90" x2="260" y2="90" stroke="#1F3864" stroke-width="2.5"/>
           <text id="elevProposedLabel" x="44" y="106" font-size="11" font-weight="700" fill="#1F3864">PROPOSED</text>
-          <line id="elevDepthLine" x1="150" y1="40" x2="150" y2="90" stroke="#7B1E1E" stroke-width="1.5"/>
+          <line id="elevDepthLine" x1="150" y1="40" x2="150" y2="90" stroke="#262626" stroke-width="1" marker-start="url(#cadArrowStart)" marker-end="url(#cadArrow)"/>
           <line id="elevDepthTickA" x1="145" y1="40" x2="155" y2="40" stroke="#7B1E1E" stroke-width="1.5"/>
           <line id="elevDepthTickB" x1="145" y1="90" x2="155" y2="90" stroke="#7B1E1E" stroke-width="1.5"/>
           <text id="elevDepthLabel" x="160" y="68" font-size="11" font-weight="700" fill="#7B1E1E">Depth: —</text>
           <text id="elevAreaLabel" x="150" y="122" text-anchor="middle" font-size="11" font-weight="700" fill="#595959">Area: —</text>
+        </svg>
+      </div>
+      <div class="calc-illustration" id="elevIsoView" hidden>
+        <svg viewBox="0 0 300 170" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="300" height="170" fill="url(#cadGridMajor)"/>
+          <polygon id="isoFloorElev" points="" fill="#E2E2E2" stroke="#262626" stroke-width="1.2"/>
+          <polygon id="isoWallLeftElev" points="" fill="#C6C6C6" stroke="#262626" stroke-width="1.2"/>
+          <polygon id="isoWallRightElev" points="" fill="#F2F2F2" stroke="#262626" stroke-width="1.2"/>
+          <line id="isoGradeFrontElev" x1="0" y1="0" x2="0" y2="0" stroke="#595959" stroke-width="1" stroke-dasharray="3,3"/>
+          <line id="isoGradeBackElev" x1="0" y1="0" x2="0" y2="0" stroke="#595959" stroke-width="1" stroke-dasharray="3,3"/>
+          <text id="isoDepthLabelElev" x="14" y="14" font-size="10.5" font-weight="700" fill="#7B1E1E">Depth: —</text>
+          <text id="isoAreaLabelElev" x="14" y="28" font-size="10.5" font-weight="700" fill="#595959">Area: —</text>
+          <text x="14" y="42" font-size="9" fill="#595959">Footprint shown as a square approximation</text>
         </svg>
       </div>
       <div class="calc-grid">
@@ -247,12 +311,9 @@
       <p class="hint-text hint-top">For house pads, ponds &amp; arenas with uneven grade — take a cut/fill reading at each grid point (corners + center is the standard 5-point method), and this averages them across the footprint. Cut = positive, fill = negative.</p>
       <div class="calc-illustration">
         <svg viewBox="0 0 300 145" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="300" height="145" fill="url(#cadGridMajor)"/>
           <rect x="70" y="20" width="160" height="90" fill="#F5F0EE" stroke="#3A3A3A" stroke-width="1.5"/>
-          <circle cx="70" cy="20" r="4" fill="#7B1E1E"/>
-          <circle cx="230" cy="20" r="4" fill="#7B1E1E"/>
-          <circle cx="70" cy="110" r="4" fill="#7B1E1E"/>
-          <circle cx="230" cy="110" r="4" fill="#7B1E1E"/>
-          <circle cx="150" cy="65" r="4" fill="#1F3864"/>
+          <g id="gridPointsGroup"></g>
           <text x="150" y="12" text-anchor="middle" font-size="10" fill="#595959">PLAN VIEW — GRID POINTS</text>
           <text id="gridAvgLabel" x="150" y="132" text-anchor="middle" font-size="11" font-weight="700" fill="#1F3864"></text>
         </svg>
@@ -267,19 +328,38 @@
 
     <div class="card calc-card">
       <h2 class="card-title">Trench / Linear Cross-Section</h2>
-      <p class="hint-text hint-top">Average end area method — good for trenches, swales &amp; roads. Side profile — updates as you type.</p>
-      <div class="calc-illustration">
+      <p class="hint-text hint-top">Average end area method — good for trenches, swales &amp; roads. Positive depth = fill (above grade). Negative depth = cut (below grade).</p>
+      <div class="view-toggle">
+        <button class="view-toggle-btn active" id="trenchViewSideBtn" type="button">📐 Side Profile</button>
+        <button class="view-toggle-btn" id="trenchViewIsoBtn" type="button">📦 Isometric</button>
+      </div>
+      <div class="calc-illustration" id="trenchSideView">
         <svg viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="300" height="150" fill="url(#cadGridMajor)"/>
           <line x1="20" y1="45" x2="280" y2="45" stroke="#595959" stroke-width="1" stroke-dasharray="3,3"/>
           <text x="24" y="37" font-size="10" fill="#595959">GRADE</text>
-          <polygon id="trenchShape" points="90,45 210,45 195,105 105,105" fill="#1F3864" stroke="#3A3A3A" stroke-width="1.5"/>
+          <polygon id="trenchShape" points="90,45 210,45 195,105 105,105" fill="url(#cutHatch)" stroke="#3A3A3A" stroke-width="1.5"/>
           <text id="trenchTopLabel" x="150" y="37" text-anchor="middle" font-size="11" font-weight="700" fill="#5A1414">Top width: —</text>
           <text id="trenchBottomLabel" x="150" y="120" text-anchor="middle" font-size="11" font-weight="700" fill="#1F3864">Bottom width: —</text>
-          <line id="trenchDepthLine" x1="70" y1="45" x2="70" y2="105" stroke="#7B1E1E" stroke-width="1.5"/>
-          <line x1="65" y1="45" x2="75" y2="45" stroke="#7B1E1E" stroke-width="1.5"/>
+          <line id="trenchDepthLine" x1="70" y1="45" x2="70" y2="105" stroke="#262626" stroke-width="1" marker-start="url(#cadArrowStart)" marker-end="url(#cadArrow)"/>
+          <line id="trenchDepthTickA" x1="65" y1="45" x2="75" y2="45" stroke="#7B1E1E" stroke-width="1.5"/>
           <line id="trenchDepthTickB" x1="65" y1="105" x2="75" y2="105" stroke="#7B1E1E" stroke-width="1.5"/>
           <text id="trenchDepthLabel" x="55" y="75" text-anchor="middle" font-size="12" font-weight="700" fill="#7B1E1E" transform="rotate(-90 55 75)">Depth: —</text>
           <text id="trenchLengthLabel" x="150" y="140" text-anchor="middle" font-size="11" font-weight="700" fill="#595959">Run length: —</text>
+        </svg>
+      </div>
+      <div class="calc-illustration" id="trenchIsoView" hidden>
+        <svg viewBox="0 0 300 170" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="300" height="170" fill="url(#cadGridMajor)"/>
+          <polygon id="isoFloor" points="" fill="#E2E2E2" stroke="#262626" stroke-width="1.2"/>
+          <polygon id="isoWallLeft" points="" fill="#C6C6C6" stroke="#262626" stroke-width="1.2"/>
+          <polygon id="isoWallRight" points="" fill="#F2F2F2" stroke="#262626" stroke-width="1.2"/>
+          <line id="isoGradeFront" x1="0" y1="0" x2="0" y2="0" stroke="#595959" stroke-width="1" stroke-dasharray="3,3"/>
+          <line id="isoGradeBack" x1="0" y1="0" x2="0" y2="0" stroke="#595959" stroke-width="1" stroke-dasharray="3,3"/>
+          <text id="isoTopLabel" x="14" y="14" font-size="10.5" font-weight="700" fill="#5A1414">Top width: —</text>
+          <text id="isoDepthLabel" x="14" y="28" font-size="10.5" font-weight="700" fill="#7B1E1E">Depth: —</text>
+          <text id="isoLengthLabel" x="14" y="42" font-size="10.5" font-weight="700" fill="#595959">Run length: —</text>
+          <text id="isoBottomLabel" x="14" y="56" font-size="10.5" font-weight="700" fill="#1F3864">Bottom width: —</text>
         </svg>
       </div>
       <div class="calc-grid">
@@ -297,6 +377,7 @@
       <p class="hint-text hint-top">Relative volume — updates as you type.</p>
       <div class="calc-illustration">
         <svg viewBox="0 0 300 130" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="300" height="130" fill="url(#cadGridMajor)"/>
           <line x1="20" y1="105" x2="280" y2="105" stroke="#3A3A3A" stroke-width="1.5"/>
           <rect id="swellBarBank" x="55" y="45" width="50" height="60" fill="#1F3864" stroke="#3A3A3A" stroke-width="1"/>
           <text x="80" y="118" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1F3864">BANK</text>
@@ -319,16 +400,42 @@
 
     <div class="card calc-card">
       <h2 class="card-title">Truck Loads Needed</h2>
-      <p class="hint-text hint-top">One icon per load — updates as you type.</p>
+      <p class="hint-text hint-top">One icon per load — updates as you type. Works for dump trucks rated by volume or off-road haul trucks rated by tons.</p>
       <div class="calc-illustration">
         <svg viewBox="0 0 300 90" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="300" height="90" fill="url(#cadGridMajor)"/>
           <g id="truckIconRow"></g>
           <text id="truckOverflowLabel" x="290" y="55" text-anchor="end" font-size="12" font-weight="700" fill="#7B1E1E"></text>
         </svg>
       </div>
       <div class="calc-grid">
         <div class="field"><label>Total Cu. Yd. to Haul</label><input type="number" inputmode="decimal" class="calc-input" data-calc="truck" data-field="totalCY" /></div>
+        <div class="field">
+          <label>Truck Rated By</label>
+          <select class="calc-input" data-calc="truck" data-field="ratedBy" id="truckRatedBy">
+            <option value="cy">Cu. Yd. (dump truck)</option>
+            <option value="tons">Tons (off-road haul truck)</option>
+          </select>
+        </div>
+      </div>
+      <div class="calc-grid" id="truckCyFields">
         <div class="field"><label>Truck Capacity (CY)</label><input type="number" inputmode="decimal" class="calc-input" data-calc="truck" data-field="capacity" value="6" /></div>
+      </div>
+      <div class="calc-grid" id="truckTonFields" hidden>
+        <div class="field">
+          <label>Material</label>
+          <select class="calc-input" data-calc="truck" data-field="densityPreset" id="truckDensityPreset">
+            <option value="1.2">Loose Soil (~1.2 t/CY)</option>
+            <option value="1.3">Common Earth (~1.3 t/CY)</option>
+            <option value="1.6">Clay (~1.6 t/CY)</option>
+            <option value="1.5">Sand &amp; Gravel (~1.5 t/CY)</option>
+            <option value="1.4">Crushed Stone / Road Base (~1.4 t/CY)</option>
+            <option value="1.65">Blasted Rock (~1.65 t/CY)</option>
+            <option value="custom">Custom...</option>
+          </select>
+        </div>
+        <div class="field"><label>Density (tons/CY)</label><input type="number" inputmode="decimal" step="0.01" class="calc-input" data-calc="truck" data-field="density" value="1.3" /></div>
+        <div class="field"><label>Truck Capacity (Tons)</label><input type="number" inputmode="decimal" class="calc-input" data-calc="truck" data-field="capacityTons" placeholder="e.g. 20, 30, 40, 60" /></div>
       </div>
       <div class="calc-result" id="result-truck">Enter volume &amp; truck capacity</div>
     </div>
@@ -338,6 +445,7 @@
       <p class="hint-text hint-top">Works for excavators, loaders, graders, rollers, or trucking — just set the unit and rate. Updates as you type.</p>
       <div class="calc-illustration">
         <svg viewBox="0 0 300 90" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="300" height="90" fill="url(#cadGridMajor)"/>
           <text id="prodBarLabel" x="20" y="20" font-size="13" font-weight="700" fill="#1F3864">—</text>
           <rect x="20" y="30" width="260" height="22" rx="4" fill="#EDE7E4" stroke="#3A3A3A" stroke-width="1"/>
           <rect id="prodBarFill" x="20" y="30" width="0" height="22" rx="4" fill="#1F3864"/>

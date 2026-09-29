@@ -573,13 +573,18 @@ textarea { resize: vertical; }
 /* Calculators */
 .calc-illustration {
   width: 100%;
-  background: var(--off-white);
-  border: 1px solid var(--gray-border-light);
-  border-radius: 8px;
-  padding: 8px 6px 4px;
+  background: #FBFAF8;
+  border: 1.5px solid #262626;
+  border-radius: 2px;
+  padding: 0;
   margin-bottom: 12px;
+  overflow: hidden;
 }
 .calc-illustration svg { width: 100%; height: auto; display: block; }
+.calc-illustration svg text {
+  font-family: "Courier New", Courier, monospace;
+  letter-spacing: 0.2px;
+}
 
 .calc-grid {
   display: grid;

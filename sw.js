@@ -1,4 +1,4 @@
-const CACHE = "gci-progress-photos-v4";
+const CACHE = "gci-progress-photos-v5";
 const SHELL = [
   "./",
   "index.html",
@@ -25,18 +25,18 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// Network-first: always try to fetch the latest version while online, so
+// updates show up on next load instead of waiting behind a stale cache.
+// Only falls back to the cached copy when there's no network at all.
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE).then((cache) => cache.put(event.request, copy));
-          return response;
-        })
-        .catch(() => cached);
-    })
+    fetch(event.request)
+      .then((response) => {
+        const copy = response.clone();
+        caches.open(CACHE).then((cache) => cache.put(event.request, copy));
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });

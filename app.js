@@ -1428,39 +1428,87 @@ function setText(id, value) {
 function updateRectIllustration(length, width, depth) {
   const hasAll = length !== null && width !== null && depth !== null;
   const boxW = hasAll ? mapClamp(length, 150, 40, 190) : 120;
-  const boxH = hasAll ? mapClamp(depth, 15, 20, 90) : 50;
+  const boxH = hasAll ? mapClamp(Math.abs(depth), 15, 20, 90) : 50;
   const boxX = 150 - boxW / 2;
-  const boxY = 50;
+  const gradeY = 50;
+  const isFill = hasAll ? depth >= 0 : false;
+  const boxY = isFill ? gradeY - boxH : gradeY;
+  const dimLineY = isFill ? boxY - 12 : boxY + boxH + 12;
+
   setAttr("rectIllusBox", "x", boxX);
+  setAttr("rectIllusBox", "y", boxY);
   setAttr("rectIllusBox", "width", boxW);
   setAttr("rectIllusBox", "height", boxH);
+  setAttr("rectIllusBox", "fill", isFill ? "url(#fillHatch)" : "url(#cutHatch)");
+
   setAttr("rectDimLenLine", "x1", boxX);
   setAttr("rectDimLenLine", "x2", boxX + boxW);
-  setAttr("rectDimLenLine", "y1", boxY + boxH + 12);
-  setAttr("rectDimLenLine", "y2", boxY + boxH + 12);
+  setAttr("rectDimLenLine", "y1", dimLineY);
+  setAttr("rectDimLenLine", "y2", dimLineY);
   setAttr("rectDimLenTickA", "x1", boxX);
   setAttr("rectDimLenTickA", "x2", boxX);
-  setAttr("rectDimLenTickA", "y1", boxY + boxH + 7);
-  setAttr("rectDimLenTickA", "y2", boxY + boxH + 17);
+  setAttr("rectDimLenTickA", "y1", dimLineY - 5);
+  setAttr("rectDimLenTickA", "y2", dimLineY + 5);
   setAttr("rectDimLenTickB", "x1", boxX + boxW);
   setAttr("rectDimLenTickB", "x2", boxX + boxW);
-  setAttr("rectDimLenTickB", "y1", boxY + boxH + 7);
-  setAttr("rectDimLenTickB", "y2", boxY + boxH + 17);
+  setAttr("rectDimLenTickB", "y1", dimLineY - 5);
+  setAttr("rectDimLenTickB", "y2", dimLineY + 5);
   setAttr("rectDimLenLabel", "x", boxX + boxW / 2);
-  setAttr("rectDimLenLabel", "y", boxY + boxH + 28);
-  setAttr("rectDimDepthLine", "y2", boxY + boxH);
-  setAttr("rectDimDepthTickB", "y1", boxY + boxH);
-  setAttr("rectDimDepthTickB", "y2", boxY + boxH);
+  setAttr("rectDimLenLabel", "y", isFill ? dimLineY - 6 : dimLineY + 16);
+
+  setAttr("rectDimDepthLine", "y1", isFill ? boxY : gradeY);
+  setAttr("rectDimDepthLine", "y2", isFill ? gradeY : boxY + boxH);
+  setAttr("rectDimDepthTickB", "y1", isFill ? gradeY : boxY + boxH);
+  setAttr("rectDimDepthTickB", "y2", isFill ? gradeY : boxY + boxH);
+
   setText("rectDimLenLabel", length !== null ? `Length: ${roundClean(length)}'` : "Length: —");
-  setText("rectDimDepthLabel", depth !== null ? `Depth: ${roundClean(Math.abs(depth))}'` : "Depth: —");
+  setText(
+    "rectDimDepthLabel",
+    depth !== null ? `${isFill ? "Fill" : "Cut"}: ${roundClean(Math.abs(depth))}'` : "Depth: —"
+  );
   setText("rectDimWidthLabel", width !== null ? `Width (into page): ${roundClean(width)}'` : "Width (into page): —");
 }
+
+const RECT_ISO_IDS = {
+  floor: "isoFloorRect",
+  wallLeft: "isoWallLeftRect",
+  wallRight: "isoWallRightRect",
+  gradeFront: "isoGradeFrontRect",
+  gradeBack: "isoGradeBackRect",
+};
+
+function updateRectIsoIllustration(length, width, depth) {
+  const hasAll = length !== null && width !== null && depth !== null;
+  const lenPx = hasAll ? mapClamp(length, 150, 40, 150) : 110;
+  const h = hasAll ? mapClamp(Math.abs(depth), 15, 20, 70) : 50;
+  const widthOffset = hasAll ? mapClamp(width, 100, 30, 110) : 70;
+
+  drawIsoExcavation(RECT_ISO_IDS, lenPx, lenPx, h, widthOffset);
+
+  setText("isoLenLabelRect", length !== null ? `Length: ${roundClean(length)}'` : "Length: —");
+  setText("isoDepthLabelRect", depth !== null ? `Depth: ${roundClean(Math.abs(depth))}'` : "Depth: —");
+  setText("isoWidthLabelRect", width !== null ? `Width: ${roundClean(width)}'` : "Width: —");
+}
+
+$("rectViewSideBtn").addEventListener("click", () => {
+  $("rectViewSideBtn").classList.add("active");
+  $("rectViewIsoBtn").classList.remove("active");
+  $("rectSideView").hidden = false;
+  $("rectIsoView").hidden = true;
+});
+$("rectViewIsoBtn").addEventListener("click", () => {
+  $("rectViewIsoBtn").classList.add("active");
+  $("rectViewSideBtn").classList.remove("active");
+  $("rectIsoView").hidden = false;
+  $("rectSideView").hidden = true;
+});
 
 function computeRect() {
   const length = calcVal("rect", "length");
   const width = calcVal("rect", "width");
   const depth = calcVal("rect", "depth");
   updateRectIllustration(length, width, depth);
+  updateRectIsoIllustration(length, width, depth);
   if (length === null || width === null || depth === null) {
     calcLastCY.rect = null;
     setCalcResult("result-rect", "Enter length, width &amp; depth");
@@ -1468,9 +1516,10 @@ function computeRect() {
   }
   const cy = (length * width * Math.abs(depth)) / 27;
   calcLastCY.rect = cy;
+  const label = depth >= 0 ? "Fill" : "Cut";
   setCalcResult(
     "result-rect",
-    `<span class="big">${fmtCY(cy)} cu. yd.</span><span class="muted">${roundClean(length)}' × ${roundClean(width)}' × ${roundClean(Math.abs(depth))}' ÷ 27</span>`
+    `${label}: <span class="big">${fmtCY(cy)} cu. yd.</span><span class="muted">${roundClean(length)}' × ${roundClean(width)}' × ${roundClean(Math.abs(depth))}' ÷ 27</span>`
   );
 }
 
@@ -1501,17 +1550,51 @@ function updateElevIllustration(existing, proposed, area) {
   const fillBottom = Math.max(existingY, propY);
   setAttr("elevFillArea", "points", `40,${fillTop} 260,${fillTop} 260,${fillBottom} 40,${fillBottom}`);
   const fillEl = document.getElementById("elevFillArea");
-  if (fillEl) fillEl.setAttribute("fill", isFill ? "#1F3864" : "#7B1E1E");
+  if (fillEl) fillEl.setAttribute("fill", isFill ? "url(#fillHatch)" : "url(#cutHatch)");
 
   setText("elevDepthLabel", hasAll ? `${isFill ? "Fill" : "Cut"}: ${Math.abs(depth).toFixed(2)}'` : "Depth: —");
   setText("elevAreaLabel", area !== null ? `Area: ${area} sq ft` : "Area: —");
 }
+
+const ELEV_ISO_IDS = {
+  floor: "isoFloorElev",
+  wallLeft: "isoWallLeftElev",
+  wallRight: "isoWallRightElev",
+  gradeFront: "isoGradeFrontElev",
+  gradeBack: "isoGradeBackElev",
+};
+
+function updateElevIsoIllustration(existing, proposed, area) {
+  const hasAll = existing !== null && proposed !== null && area !== null;
+  const depth = hasAll ? Math.abs(existing - proposed) : null;
+  const sidePx = hasAll ? mapClamp(Math.sqrt(area), 120, 40, 150) : 100;
+  const h = hasAll ? mapClamp(depth, 12, 20, 70) : 45;
+
+  drawIsoExcavation(ELEV_ISO_IDS, sidePx, sidePx, h, sidePx);
+
+  setText("isoDepthLabelElev", depth !== null ? `Depth: ${roundClean(depth)}'` : "Depth: —");
+  setText("isoAreaLabelElev", area !== null ? `Area: ${roundClean(area)} sq ft` : "Area: —");
+}
+
+$("elevViewSideBtn").addEventListener("click", () => {
+  $("elevViewSideBtn").classList.add("active");
+  $("elevViewIsoBtn").classList.remove("active");
+  $("elevSideView").hidden = false;
+  $("elevIsoView").hidden = true;
+});
+$("elevViewIsoBtn").addEventListener("click", () => {
+  $("elevViewIsoBtn").classList.add("active");
+  $("elevViewSideBtn").classList.remove("active");
+  $("elevIsoView").hidden = false;
+  $("elevSideView").hidden = true;
+});
 
 function computeElev() {
   const existing = calcVal("elev", "existing");
   const proposed = calcVal("elev", "proposed");
   const area = calcVal("elev", "area");
   updateElevIllustration(existing, proposed, area);
+  updateElevIsoIllustration(existing, proposed, area);
   if (existing === null || proposed === null || area === null) {
     calcLastCY.elev = null;
     setCalcResult("result-elev", "Enter elevations &amp; area");
@@ -1531,24 +1614,101 @@ function updateTrenchIllustration(topWidth, bottomWidth, depth) {
   const hasAll = topWidth !== null && bottomWidth !== null && depth !== null;
   const topW = hasAll ? mapClamp(topWidth, 20, 30, 170) : 120;
   const botW = hasAll ? mapClamp(bottomWidth, 20, 20, 130) : 90;
-  const h = hasAll ? mapClamp(depth, 12, 25, 90) : 60;
-  const topY = 45;
-  const botY = topY + h;
+  const h = hasAll ? mapClamp(Math.abs(depth), 12, 25, 90) : 60;
+  const gradeY = 45;
+  const isFill = hasAll ? depth >= 0 : false;
+  const topY = isFill ? gradeY - h : gradeY;
+  const botY = isFill ? gradeY : gradeY + h;
   const topX1 = 150 - topW / 2;
   const topX2 = 150 + topW / 2;
   const botX1 = 150 - botW / 2;
   const botX2 = 150 + botW / 2;
   setAttr("trenchShape", "points", `${topX1},${topY} ${topX2},${topY} ${botX2},${botY} ${botX1},${botY}`);
+  setAttr("trenchShape", "fill", isFill ? "url(#fillHatch)" : "url(#cutHatch)");
   setAttr("trenchTopLabel", "y", topY - 8);
   setAttr("trenchBottomLabel", "y", botY + 15);
   setAttr("trenchDepthLine", "y1", topY);
   setAttr("trenchDepthLine", "y2", botY);
+  setAttr("trenchDepthTickA", "y1", topY);
+  setAttr("trenchDepthTickA", "y2", topY);
   setAttr("trenchDepthTickB", "y1", botY);
   setAttr("trenchDepthTickB", "y2", botY);
   setText("trenchTopLabel", topWidth !== null ? `Top width: ${roundClean(topWidth)}'` : "Top width: —");
   setText("trenchBottomLabel", bottomWidth !== null ? `Bottom width: ${roundClean(bottomWidth)}'` : "Bottom width: —");
-  setText("trenchDepthLabel", depth !== null ? `Depth: ${roundClean(depth)}'` : "Depth: —");
+  setText(
+    "trenchDepthLabel",
+    depth !== null ? `${isFill ? "Fill" : "Cut"}: ${roundClean(Math.abs(depth))}'` : "Depth: —"
+  );
 }
+
+// Generic isometric excavation drawer, shared by every 3D-shaped calculator.
+// topWpx/botWpx = front cross-section widths, hPx = depth, extrudePx = receding "length" axis.
+function drawIsoExcavation(ids, topWpx, botWpx, hPx, extrudePx) {
+  const cx = 90;
+  const frontBotY = 155;
+  const frontTopY = frontBotY - hPx;
+  const offX = extrudePx * 0.866;
+  const offY = -extrudePx * 0.5;
+
+  const FTL = [cx - topWpx / 2, frontTopY];
+  const FTR = [cx + topWpx / 2, frontTopY];
+  const FBR = [cx + botWpx / 2, frontBotY];
+  const FBL = [cx - botWpx / 2, frontBotY];
+  const BTL = [FTL[0] + offX, FTL[1] + offY];
+  const BTR = [FTR[0] + offX, FTR[1] + offY];
+  const BBR = [FBR[0] + offX, FBR[1] + offY];
+  const BBL = [FBL[0] + offX, FBL[1] + offY];
+
+  const pts = (arr) => arr.map((p) => p.join(",")).join(" ");
+  setAttr(ids.floor, "points", pts([FBL, BBL, BBR, FBR]));
+  setAttr(ids.wallLeft, "points", pts([FTL, BTL, BBL, FBL]));
+  setAttr(ids.wallRight, "points", pts([FTR, BTR, BBR, FBR]));
+
+  setAttr(ids.gradeFront, "x1", FTL[0] - 25);
+  setAttr(ids.gradeFront, "y1", FTL[1]);
+  setAttr(ids.gradeFront, "x2", FTR[0] + 25);
+  setAttr(ids.gradeFront, "y2", FTR[1]);
+  setAttr(ids.gradeBack, "x1", BTL[0] - 25);
+  setAttr(ids.gradeBack, "y1", BTL[1]);
+  setAttr(ids.gradeBack, "x2", BTR[0] + 25);
+  setAttr(ids.gradeBack, "y2", BTR[1]);
+}
+
+const TRENCH_ISO_IDS = {
+  floor: "isoFloor",
+  wallLeft: "isoWallLeft",
+  wallRight: "isoWallRight",
+  gradeFront: "isoGradeFront",
+  gradeBack: "isoGradeBack",
+};
+
+function updateTrenchIsoIllustration(topWidth, bottomWidth, depth, length) {
+  const hasAll = topWidth !== null && bottomWidth !== null && depth !== null && length !== null;
+  const topW = hasAll ? mapClamp(topWidth, 20, 40, 140) : 100;
+  const botW = hasAll ? mapClamp(bottomWidth, 20, 30, 100) : 70;
+  const h = hasAll ? mapClamp(depth, 12, 25, 70) : 50;
+  const runOffset = hasAll ? mapClamp(length, 100, 30, 110) : 70;
+
+  drawIsoExcavation(TRENCH_ISO_IDS, topW, botW, h, runOffset);
+
+  setText("isoTopLabel", topWidth !== null ? `Top width: ${roundClean(topWidth)}'` : "Top width: —");
+  setText("isoBottomLabel", bottomWidth !== null ? `Bottom width: ${roundClean(bottomWidth)}'` : "Bottom width: —");
+  setText("isoDepthLabel", depth !== null ? `Depth: ${roundClean(depth)}'` : "Depth: —");
+  setText("isoLengthLabel", length !== null ? `Run length: ${roundClean(length)}'` : "Run length: —");
+}
+
+$("trenchViewSideBtn").addEventListener("click", () => {
+  $("trenchViewSideBtn").classList.add("active");
+  $("trenchViewIsoBtn").classList.remove("active");
+  $("trenchSideView").hidden = false;
+  $("trenchIsoView").hidden = true;
+});
+$("trenchViewIsoBtn").addEventListener("click", () => {
+  $("trenchViewIsoBtn").classList.add("active");
+  $("trenchViewSideBtn").classList.remove("active");
+  $("trenchIsoView").hidden = false;
+  $("trenchSideView").hidden = true;
+});
 
 function computeTrench() {
   const topWidth = calcVal("trench", "topWidth");
@@ -1556,18 +1716,20 @@ function computeTrench() {
   const depth = calcVal("trench", "depth");
   const length = calcVal("trench", "length");
   updateTrenchIllustration(topWidth, bottomWidth, depth);
+  updateTrenchIsoIllustration(topWidth, bottomWidth, depth, length);
   setText("trenchLengthLabel", length !== null ? `Run length: ${roundClean(length)}'` : "Run length: —");
   if (topWidth === null || bottomWidth === null || depth === null || length === null) {
     calcLastCY.trench = null;
     setCalcResult("result-trench", "Enter dimensions");
     return;
   }
-  const area = ((topWidth + bottomWidth) / 2) * depth;
+  const area = ((topWidth + bottomWidth) / 2) * Math.abs(depth);
   const cy = (area * length) / 27;
   calcLastCY.trench = cy;
+  const label = depth >= 0 ? "Fill" : "Cut";
   setCalcResult(
     "result-trench",
-    `<span class="big">${fmtCY(cy)} cu. yd.</span><span class="muted">Avg end area ${area.toFixed(2)} sq ft × ${roundClean(length)}' ÷ 27</span>`
+    `${label}: <span class="big">${fmtCY(cy)} cu. yd.</span><span class="muted">Avg end area ${area.toFixed(2)} sq ft × ${roundClean(length)}' ÷ 27</span>`
   );
 }
 
@@ -1581,6 +1743,64 @@ function persistGridReadings() {
 
 function gridPointLabel(i) {
   return i < 4 ? `Corner ${i + 1}` : i === 4 ? "Center" : `Point ${i + 1}`;
+}
+
+// Positions the first 4 readings at the corners, the 5th at center (the
+// standard 5-point method), and spreads any extra points evenly around
+// the footprint's perimeter so every added reading actually shows up.
+function gridPointPosition(i, total) {
+  const x0 = 70, x1 = 230, y0 = 20, y1 = 110;
+  const corners = [
+    [x0, y0],
+    [x1, y0],
+    [x0, y1],
+    [x1, y1],
+  ];
+  if (i < 4) return corners[i];
+  if (i === 4) return [(x0 + x1) / 2, (y0 + y1) / 2];
+
+  const extraIndex = i - 5;
+  const extraCount = Math.max(total - 5, 1);
+  const w = x1 - x0;
+  const h = y1 - y0;
+  const perimeter = 2 * (w + h);
+  const t = (extraIndex + 1) / (extraCount + 1);
+  let d = t * perimeter;
+  if (d < w) return [x0 + d, y0];
+  d -= w;
+  if (d < h) return [x1, y0 + d];
+  d -= h;
+  if (d < w) return [x1 - d, y1];
+  d -= w;
+  return [x0, y1 - d];
+}
+
+function renderGridPointsDiagram() {
+  const group = $("gridPointsGroup");
+  group.innerHTML = "";
+  const total = gridReadings.length;
+  gridReadings.forEach((val, i) => {
+    const [x, y] = gridPointPosition(i, total);
+    const isCenter = i === 4;
+    const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    dot.setAttribute("cx", x);
+    dot.setAttribute("cy", y);
+    dot.setAttribute("r", 4);
+    dot.setAttribute("fill", val === null ? "#BFBFBF" : isCenter ? "#1F3864" : "#7B1E1E");
+    group.appendChild(dot);
+
+    if (val !== null) {
+      const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      label.setAttribute("x", x);
+      label.setAttribute("y", y - 8 < 12 ? y + 15 : y - 8);
+      label.setAttribute("text-anchor", "middle");
+      label.setAttribute("font-size", "9");
+      label.setAttribute("font-weight", "700");
+      label.setAttribute("fill", isCenter ? "#1F3864" : "#7B1E1E");
+      label.textContent = `${val > 0 ? "+" : ""}${roundClean(val)}'`;
+      group.appendChild(label);
+    }
+  });
 }
 
 function renderGridReadings() {
@@ -1628,6 +1848,7 @@ function renderGridReadings() {
 }
 
 function computeGrid() {
+  renderGridPointsDiagram();
   const area = calcVal("grid", "area");
   const valid = gridReadings.filter((v) => v !== null && !Number.isNaN(v));
   if (area === null || valid.length === 0) {
@@ -1652,6 +1873,25 @@ $("gridAddReadingBtn").addEventListener("click", () => {
   persistGridReadings();
   renderGridReadings();
   computeGrid();
+});
+
+function updateTruckFieldVisibility() {
+  const ratedBy = $("truckRatedBy").value;
+  $("truckCyFields").hidden = ratedBy !== "cy";
+  $("truckTonFields").hidden = ratedBy !== "tons";
+}
+
+$("truckRatedBy").addEventListener("change", updateTruckFieldVisibility);
+
+$("truckDensityPreset").addEventListener("change", () => {
+  const preset = $("truckDensityPreset").value;
+  if (preset === "custom") return;
+  const densityInput = document.querySelector('.calc-input[data-calc="truck"][data-field="density"]');
+  densityInput.value = preset;
+  try {
+    localStorage.setItem("gci_calc_truck_density", densityInput.value);
+  } catch (e) {}
+  computeTruck();
 });
 
 function updateSwellIllustration(bankCY, swellPct, compactedCY, looseCY) {
@@ -1721,8 +1961,34 @@ function updateTruckIllustration(loads) {
 
 function computeTruck() {
   const totalCY = calcVal("truck", "totalCY");
+  const ratedBy = calcVal("truck", "ratedBy") || "cy";
+
+  if (totalCY === null) {
+    setCalcResult("result-truck", "Enter volume &amp; truck capacity");
+    updateTruckIllustration(0);
+    return;
+  }
+
+  if (ratedBy === "tons") {
+    const density = calcVal("truck", "density");
+    const capacityTons = calcVal("truck", "capacityTons");
+    if (!density || !capacityTons) {
+      setCalcResult("result-truck", "Enter volume &amp; truck capacity");
+      updateTruckIllustration(0);
+      return;
+    }
+    const totalTons = totalCY * density;
+    const loads = Math.ceil(totalTons / capacityTons);
+    updateTruckIllustration(loads);
+    setCalcResult(
+      "result-truck",
+      `<span class="big">${loads} load${loads === 1 ? "" : "s"}</span><span class="muted">${fmtCY(totalCY)} CY × ${density} t/CY = ${fmtCY(totalTons)} tons ÷ ${capacityTons} tons per load</span>`
+    );
+    return;
+  }
+
   const capacity = calcVal("truck", "capacity");
-  if (totalCY === null || !capacity) {
+  if (!capacity) {
     setCalcResult("result-truck", "Enter volume &amp; truck capacity");
     updateTruckIllustration(0);
     return;
@@ -1863,6 +2129,7 @@ function restoreCalcInputs() {
     }
   } catch (e) {}
   renderGridReadings();
+  updateTruckFieldVisibility();
 
   Object.values(CALC_FNS).forEach((fn) => fn());
 }
@@ -1945,14 +2212,33 @@ function getCalcSectionsForPdf() {
   }
 
   const totalCY = calcVal("truck", "totalCY");
-  const capacity = calcVal("truck", "capacity");
-  if (totalCY !== null && capacity) {
-    const loads = Math.ceil(totalCY / capacity);
-    sections.push({
-      title: "Truck Loads Needed",
-      lines: [`Total: ${fmtCY(totalCY)} CY`, `Truck Capacity: ${capacity} CY`],
-      result: `${loads} load${loads === 1 ? "" : "s"}`,
-    });
+  const truckRatedBy = calcVal("truck", "ratedBy") || "cy";
+  if (totalCY !== null && truckRatedBy === "tons") {
+    const density = calcVal("truck", "density");
+    const capacityTons = calcVal("truck", "capacityTons");
+    if (density && capacityTons) {
+      const totalTons = totalCY * density;
+      const loads = Math.ceil(totalTons / capacityTons);
+      sections.push({
+        title: "Truck Loads Needed",
+        lines: [
+          `Total: ${fmtCY(totalCY)} CY`,
+          `Density: ${density} tons/CY (${fmtCY(totalTons)} tons total)`,
+          `Truck Capacity: ${capacityTons} tons`,
+        ],
+        result: `${loads} load${loads === 1 ? "" : "s"}`,
+      });
+    }
+  } else if (totalCY !== null) {
+    const capacity = calcVal("truck", "capacity");
+    if (capacity) {
+      const loads = Math.ceil(totalCY / capacity);
+      sections.push({
+        title: "Truck Loads Needed",
+        lines: [`Total: ${fmtCY(totalCY)} CY`, `Truck Capacity: ${capacity} CY`],
+        result: `${loads} load${loads === 1 ? "" : "s"}`,
+      });
+    }
   }
 
   const qty = calcVal("prod", "qty");
