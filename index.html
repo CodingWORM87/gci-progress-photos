@@ -92,6 +92,15 @@
       </div>
 
       <div class="field">
+        <label>Photo Type</label>
+        <div class="chip-grid" id="dayMarkerChips">
+          <button class="chip selected" type="button" data-marker="">📷 Progress</button>
+          <button class="chip" type="button" data-marker="start">☀️ Start of Day</button>
+          <button class="chip" type="button" data-marker="end">🌙 End of Day</button>
+        </div>
+      </div>
+
+      <div class="field">
         <div class="label-row">
           <label>Equipment used</label>
           <span class="label-hint">tap all that apply</span>
@@ -232,22 +241,22 @@
         <button class="view-toggle-btn" id="rectViewIsoBtn" type="button">📦 Isometric</button>
       </div>
       <div class="calc-illustration" id="rectSideView">
-        <svg viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
-          <rect x="0" y="0" width="300" height="150" fill="url(#cadGridMajor)"/>
-          <rect x="20" y="50" width="260" height="100" fill="url(#soilHatch)"/>
-          <line x1="20" y1="50" x2="280" y2="50" stroke="#262626" stroke-width="1.5"/>
-          <line x1="20" y1="50" x2="280" y2="50" stroke="#595959" stroke-width="1" stroke-dasharray="3,3"/>
-          <text x="24" y="42" font-size="10" fill="#595959">EXISTING GRADE</text>
-          <rect id="rectIllusBox" x="90" y="50" width="120" height="50" fill="url(#cutHatch)" stroke="#3A3A3A" stroke-width="1.5"/>
-          <line id="rectDimLenLine" x1="90" y1="112" x2="210" y2="112" stroke="#262626" stroke-width="1" marker-start="url(#cadArrowStart)" marker-end="url(#cadArrow)"/>
-          <line id="rectDimLenTickA" x1="90" y1="107" x2="90" y2="117" stroke="#7B1E1E" stroke-width="1.5"/>
-          <line id="rectDimLenTickB" x1="210" y1="107" x2="210" y2="117" stroke="#7B1E1E" stroke-width="1.5"/>
-          <text id="rectDimLenLabel" x="150" y="128" text-anchor="middle" font-size="12" font-weight="700" fill="#7B1E1E">Length: —</text>
-          <line id="rectDimDepthLine" x1="70" y1="50" x2="70" y2="100" stroke="#262626" stroke-width="1" marker-start="url(#cadArrowStart)" marker-end="url(#cadArrow)"/>
-          <line x1="65" y1="50" x2="75" y2="50" stroke="#1F3864" stroke-width="1.5"/>
-          <line id="rectDimDepthTickB" x1="65" y1="100" x2="75" y2="100" stroke="#1F3864" stroke-width="1.5"/>
-          <text id="rectDimDepthLabel" x="55" y="78" text-anchor="middle" font-size="12" font-weight="700" fill="#1F3864" transform="rotate(-90 55 78)">Depth: —</text>
-          <text id="rectDimWidthLabel" x="150" y="145" text-anchor="middle" font-size="11" font-weight="700" fill="#5A1414">Width (into page): —</text>
+        <svg viewBox="0 0 300 190" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="300" height="190" fill="url(#cadGridMajor)"/>
+          <rect x="20" y="95" width="260" height="95" fill="url(#soilHatch)"/>
+          <line x1="20" y1="95" x2="280" y2="95" stroke="#262626" stroke-width="1.5"/>
+          <line x1="20" y1="95" x2="280" y2="95" stroke="#595959" stroke-width="1" stroke-dasharray="3,3"/>
+          <text x="24" y="87" font-size="10" fill="#595959">EXISTING GRADE</text>
+          <rect id="rectIllusBox" x="90" y="95" width="120" height="50" fill="url(#cutHatch)" stroke="#3A3A3A" stroke-width="1.5"/>
+          <line id="rectDimLenLine" x1="90" y1="157" x2="210" y2="157" stroke="#262626" stroke-width="1" marker-start="url(#cadArrowStart)" marker-end="url(#cadArrow)"/>
+          <line id="rectDimLenTickA" x1="90" y1="152" x2="90" y2="162" stroke="#7B1E1E" stroke-width="1.5"/>
+          <line id="rectDimLenTickB" x1="210" y1="152" x2="210" y2="162" stroke="#7B1E1E" stroke-width="1.5"/>
+          <text id="rectDimLenLabel" x="150" y="173" text-anchor="middle" font-size="12" font-weight="700" fill="#7B1E1E">Length: —</text>
+          <line id="rectDimDepthLine" x1="70" y1="95" x2="70" y2="145" stroke="#262626" stroke-width="1" marker-start="url(#cadArrowStart)" marker-end="url(#cadArrow)"/>
+          <line x1="65" y1="95" x2="75" y2="95" stroke="#1F3864" stroke-width="1.5"/>
+          <line id="rectDimDepthTickB" x1="65" y1="145" x2="75" y2="145" stroke="#1F3864" stroke-width="1.5"/>
+          <text id="rectDimDepthLabel" x="55" y="123" text-anchor="middle" font-size="12" font-weight="700" fill="#1F3864" transform="rotate(-90 55 123)">Depth: —</text>
+          <text id="rectDimWidthLabel" x="150" y="185" text-anchor="middle" font-size="11" font-weight="700" fill="#5A1414">Width (into page): —</text>
         </svg>
       </div>
       <div class="calc-illustration" id="rectIsoView" hidden>
@@ -266,7 +275,16 @@
       <div class="calc-grid">
         <div class="field"><label id="lbl-rect-length">Length</label><input type="text" inputmode="decimal" class="calc-input" data-calc="rect" data-field="length" data-unit="linear" /></div>
         <div class="field"><label id="lbl-rect-width">Width</label><input type="text" inputmode="decimal" class="calc-input" data-calc="rect" data-field="width" data-unit="linear" /></div>
-        <div class="field"><label id="lbl-rect-depth">Depth</label><input type="text" inputmode="decimal" class="calc-input" data-calc="rect" data-field="depth" data-unit="linear" /></div>
+      </div>
+      <div class="field">
+        <label>Cut or Fill?</label>
+        <div class="view-toggle">
+          <button class="view-toggle-btn" id="rectCutBtn" type="button">⬇️ Cut (below grade)</button>
+          <button class="view-toggle-btn active" id="rectFillBtn" type="button">⬆️ Fill (above grade)</button>
+        </div>
+      </div>
+      <div class="calc-grid">
+        <div class="field"><label id="lbl-rect-depth">Depth Amount</label><input type="text" inputmode="decimal" class="calc-input" data-calc="rect" data-field="depth" data-unit="linear" /></div>
       </div>
       <div class="calc-result" id="result-rect">Enter length, width &amp; depth</div>
       <button class="btn-ghost-sm calc-send" data-target="prod" data-source="rect">Send cu. yd. to Time Estimator ↓</button>
@@ -282,11 +300,11 @@
       <div class="calc-illustration" id="elevSideView">
         <svg viewBox="0 0 300 130" xmlns="http://www.w3.org/2000/svg">
           <rect x="0" y="0" width="300" height="130" fill="url(#cadGridMajor)"/>
-          <rect id="elevGroundArea" x="40" y="90" width="220" height="40" fill="url(#soilHatch)"/>
-          <polygon id="elevFillArea" points="40,40 260,40 260,90 40,90" fill="url(#cutHatch)" stroke="#262626" stroke-width="1"/>
-          <line id="elevExistingLine" x1="40" y1="40" x2="260" y2="40" stroke="#3A3A3A" stroke-width="2" stroke-dasharray="6,4"/>
+          <rect id="elevGroundArea" x="20" y="90" width="260" height="40" fill="url(#soilHatch)"/>
+          <polygon id="elevFillArea" points="20,40 280,40 280,90 20,90" fill="url(#cutHatch)" stroke="#262626" stroke-width="1"/>
+          <line id="elevExistingLine" x1="20" y1="40" x2="280" y2="40" stroke="#3A3A3A" stroke-width="2" stroke-dasharray="6,4"/>
           <text x="44" y="32" font-size="11" font-weight="700" fill="#3A3A3A">EXISTING</text>
-          <line id="elevProposedLine" x1="40" y1="90" x2="260" y2="90" stroke="#1F3864" stroke-width="2.5"/>
+          <line id="elevProposedLine" x1="20" y1="90" x2="280" y2="90" stroke="#1F3864" stroke-width="2.5"/>
           <text id="elevProposedLabel" x="44" y="106" font-size="11" font-weight="700" fill="#1F3864">PROPOSED</text>
           <line id="elevDepthLine" x1="150" y1="40" x2="150" y2="90" stroke="#262626" stroke-width="1" marker-start="url(#cadArrowStart)" marker-end="url(#cadArrow)"/>
           <line id="elevDepthTickA" x1="145" y1="40" x2="155" y2="40" stroke="#7B1E1E" stroke-width="1.5"/>
@@ -345,20 +363,20 @@
         <button class="view-toggle-btn" id="trenchViewIsoBtn" type="button">📦 Isometric</button>
       </div>
       <div class="calc-illustration" id="trenchSideView">
-        <svg viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
-          <rect x="0" y="0" width="300" height="150" fill="url(#cadGridMajor)"/>
-          <rect x="20" y="45" width="260" height="105" fill="url(#soilHatch)"/>
-          <line x1="20" y1="45" x2="280" y2="45" stroke="#262626" stroke-width="1.5"/>
-          <line x1="20" y1="45" x2="280" y2="45" stroke="#595959" stroke-width="1" stroke-dasharray="3,3"/>
-          <text x="24" y="37" font-size="10" fill="#595959">EXISTING GRADE</text>
-          <polygon id="trenchShape" points="90,45 210,45 195,105 105,105" fill="url(#cutHatch)" stroke="#3A3A3A" stroke-width="1.5"/>
-          <text id="trenchTopLabel" x="150" y="37" text-anchor="middle" font-size="11" font-weight="700" fill="#5A1414">Top width: —</text>
-          <text id="trenchBottomLabel" x="150" y="120" text-anchor="middle" font-size="11" font-weight="700" fill="#1F3864">Bottom width: —</text>
-          <line id="trenchDepthLine" x1="70" y1="45" x2="70" y2="105" stroke="#262626" stroke-width="1" marker-start="url(#cadArrowStart)" marker-end="url(#cadArrow)"/>
-          <line id="trenchDepthTickA" x1="65" y1="45" x2="75" y2="45" stroke="#7B1E1E" stroke-width="1.5"/>
-          <line id="trenchDepthTickB" x1="65" y1="105" x2="75" y2="105" stroke="#7B1E1E" stroke-width="1.5"/>
-          <text id="trenchDepthLabel" x="55" y="75" text-anchor="middle" font-size="12" font-weight="700" fill="#7B1E1E" transform="rotate(-90 55 75)">Depth: —</text>
-          <text id="trenchLengthLabel" x="150" y="140" text-anchor="middle" font-size="11" font-weight="700" fill="#595959">Run length: —</text>
+        <svg viewBox="0 0 300 190" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="300" height="190" fill="url(#cadGridMajor)"/>
+          <rect x="20" y="95" width="260" height="95" fill="url(#soilHatch)"/>
+          <line x1="20" y1="95" x2="280" y2="95" stroke="#262626" stroke-width="1.5"/>
+          <line x1="20" y1="95" x2="280" y2="95" stroke="#595959" stroke-width="1" stroke-dasharray="3,3"/>
+          <text x="24" y="87" font-size="10" fill="#595959">EXISTING GRADE</text>
+          <polygon id="trenchShape" points="90,95 210,95 195,145 105,145" fill="url(#cutHatch)" stroke="#3A3A3A" stroke-width="1.5"/>
+          <text id="trenchTopLabel" x="150" y="87" text-anchor="middle" font-size="11" font-weight="700" fill="#5A1414">Top width: —</text>
+          <text id="trenchBottomLabel" x="150" y="160" text-anchor="middle" font-size="11" font-weight="700" fill="#1F3864">Bottom width: —</text>
+          <line id="trenchDepthLine" x1="70" y1="95" x2="70" y2="145" stroke="#262626" stroke-width="1" marker-start="url(#cadArrowStart)" marker-end="url(#cadArrow)"/>
+          <line id="trenchDepthTickA" x1="65" y1="95" x2="75" y2="95" stroke="#7B1E1E" stroke-width="1.5"/>
+          <line id="trenchDepthTickB" x1="65" y1="145" x2="75" y2="145" stroke="#7B1E1E" stroke-width="1.5"/>
+          <text id="trenchDepthLabel" x="55" y="123" text-anchor="middle" font-size="12" font-weight="700" fill="#7B1E1E" transform="rotate(-90 55 123)">Depth: —</text>
+          <text id="trenchLengthLabel" x="150" y="180" text-anchor="middle" font-size="11" font-weight="700" fill="#595959">Run length: —</text>
         </svg>
       </div>
       <div class="calc-illustration" id="trenchIsoView" hidden>
@@ -398,8 +416,15 @@
       </div>
       <p class="hint-text" id="trenchSlopeInfo"></p>
 
+      <div class="field">
+        <label>Cut or Fill?</label>
+        <div class="view-toggle">
+          <button class="view-toggle-btn active" id="trenchCutBtn" type="button">⬇️ Cut (below grade)</button>
+          <button class="view-toggle-btn" id="trenchFillBtn" type="button">⬆️ Fill (above grade)</button>
+        </div>
+      </div>
       <div class="calc-grid">
-        <div class="field"><label id="lbl-trench-depth">Depth</label><input type="text" inputmode="decimal" class="calc-input" data-calc="trench" data-field="depth" data-unit="linear" /></div>
+        <div class="field"><label id="lbl-trench-depth">Depth Amount</label><input type="text" inputmode="decimal" class="calc-input" data-calc="trench" data-field="depth" data-unit="linear" /></div>
         <div class="field"><label id="lbl-trench-length">Length</label><input type="text" inputmode="decimal" class="calc-input" data-calc="trench" data-field="length" data-unit="linear" /></div>
       </div>
       <div class="calc-result" id="result-trench">Enter dimensions</div>
@@ -521,11 +546,8 @@
   <section class="screen" id="screen-jobs" hidden>
     <div class="card">
       <h2 class="card-title">Job Sites</h2>
-      <div class="add-row">
-        <input type="text" id="newJobInput" placeholder="New job site name" />
-        <button class="btn-square" id="addJobBtn">+</button>
-      </div>
-      <ul class="manage-list" id="jobList"></ul>
+      <button class="btn-primary" id="addJobManageBtn" type="button">+ Add Job Site</button>
+      <ul class="manage-list" id="jobList" style="margin-top:12px;"></ul>
     </div>
 
     <div class="card">
@@ -576,11 +598,39 @@
     <img id="modalPhoto" class="modal-photo" />
     <div class="modal-body">
       <div class="modal-row"><strong id="modalJob"></strong><span id="modalDate"></span></div>
+      <span id="modalDayMarker" class="day-marker-badge" hidden></span>
       <div class="modal-equip" id="modalEquip"></div>
       <p class="modal-note" id="modalNote"></p>
       <p class="modal-location" id="modalLocation"></p>
       <button class="btn-ghost-sm" id="modalShareLocationBtn" type="button" hidden style="width:auto;padding:4px 0;">📤 Share location pin</button>
       <button class="btn-danger-sm" id="deleteEntryBtn">Delete entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD JOB MODAL -->
+<div class="modal-backdrop" id="addJobModal" hidden>
+  <div class="modal">
+    <button class="modal-close" id="closeAddJobBtn">✕</button>
+    <div class="modal-body">
+      <h2 class="card-title" style="margin-top:6px;">Add Job Site</h2>
+      <div class="field">
+        <label for="newJobNameInput">Job Name *</label>
+        <input type="text" id="newJobNameInput" placeholder="e.g. Smith Residence" />
+      </div>
+      <div class="field">
+        <label for="newJobAddressInput">Address</label>
+        <input type="text" id="newJobAddressInput" placeholder="123 Main St, City, State" />
+      </div>
+      <div class="field">
+        <label for="newJobNumberInput">Job # / Reference</label>
+        <input type="text" id="newJobNumberInput" placeholder="e.g. 2026-014" />
+      </div>
+      <div class="field">
+        <label for="newJobDescInput">Description / Scope</label>
+        <textarea id="newJobDescInput" rows="3" placeholder="e.g. New home site work — clearing through final grade"></textarea>
+      </div>
+      <button class="btn-primary" id="saveNewJobBtn" type="button">Save Job Site</button>
     </div>
   </div>
 </div>

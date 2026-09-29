@@ -104,6 +104,7 @@ const state = {
   location: null,
   activeTab: "capture",
   reportEntries: null,
+  dayMarker: "",
 };
 
 /* ---------- Utilities ---------- */
@@ -341,10 +342,37 @@ $("retakeBtn").addEventListener("click", (e) => {
 
 $("jobSelect").addEventListener("change", updateSaveEnabled);
 
-$("addJobQuick").addEventListener("click", async () => {
-  const name = prompt("New job site name:");
-  if (!name || !name.trim()) return;
-  const job = { id: uid(), name: name.trim() };
+function openAddJobModal() {
+  $("newJobNameInput").value = "";
+  $("newJobAddressInput").value = "";
+  $("newJobNumberInput").value = "";
+  $("newJobDescInput").value = "";
+  $("addJobModal").hidden = false;
+}
+
+$("addJobQuick").addEventListener("click", openAddJobModal);
+$("addJobManageBtn").addEventListener("click", openAddJobModal);
+
+$("closeAddJobBtn").addEventListener("click", () => {
+  $("addJobModal").hidden = true;
+});
+$("addJobModal").addEventListener("click", (e) => {
+  if (e.target.id === "addJobModal") $("addJobModal").hidden = true;
+});
+
+$("saveNewJobBtn").addEventListener("click", async () => {
+  const name = $("newJobNameInput").value.trim();
+  if (!name) {
+    toast("Job name is required");
+    return;
+  }
+  const job = {
+    id: uid(),
+    name,
+    address: $("newJobAddressInput").value.trim(),
+    jobNumber: $("newJobNumberInput").value.trim(),
+    description: $("newJobDescInput").value.trim(),
+  };
   await idbPut("jobs", job);
   state.jobs.push(job);
   renderJobSelect($("jobSelect"), false);
@@ -352,6 +380,8 @@ $("addJobQuick").addEventListener("click", async () => {
   renderJobSelect($("historyJobFilter"), true);
   renderJobSelect($("reportJobFilter"), true);
   updateSaveEnabled();
+  renderManageLists();
+  $("addJobModal").hidden = true;
   toast("Job added");
 });
 
@@ -441,6 +471,13 @@ $("addLocationBtn").addEventListener("click", () => {
   );
 });
 
+document.querySelectorAll("#dayMarkerChips .chip").forEach((chip) => {
+  chip.addEventListener("click", () => {
+    state.dayMarker = chip.dataset.marker;
+    document.querySelectorAll("#dayMarkerChips .chip").forEach((c) => c.classList.toggle("selected", c === chip));
+  });
+});
+
 $("saveEntryBtn").addEventListener("click", async () => {
   if (!state.photoBlob || !$("jobSelect").value) return;
   const jobId = $("jobSelect").value;
@@ -456,6 +493,7 @@ $("saveEntryBtn").addEventListener("click", async () => {
     note: $("noteInput").value.trim(),
     photoBlob: state.photoBlob,
     location: state.location,
+    dayMarker: state.dayMarker || "",
   };
 
   await idbPut("entries", entry);
@@ -506,10 +544,19 @@ function buildEntryCard(entry) {
   const info = document.createElement("div");
   info.className = "entry-info";
 
-  const jobEl = document.createElement("div");
+  const jobRow = document.createElement("div");
+  jobRow.style.cssText = "display:flex;align-items:center;gap:6px;flex-wrap:wrap;";
+  const jobEl = document.createElement("span");
   jobEl.className = "entry-job";
   jobEl.textContent = entry.jobName;
-  info.appendChild(jobEl);
+  jobRow.appendChild(jobEl);
+  if (entry.dayMarker === "start" || entry.dayMarker === "end") {
+    const badge = document.createElement("span");
+    badge.className = "day-marker-badge " + entry.dayMarker;
+    badge.textContent = entry.dayMarker === "start" ? "☀️ START OF DAY" : "🌙 END OF DAY";
+    jobRow.appendChild(badge);
+  }
+  info.appendChild(jobRow);
 
   const dateEl = document.createElement("div");
   dateEl.className = "entry-date";
@@ -728,6 +775,13 @@ function openEntryModal(entry) {
   $("modalPhoto").src = blobUrlFor(entry.id, entry.photoBlob);
   $("modalJob").textContent = entry.jobName;
   $("modalDate").textContent = fmtDateTime(entry.timestamp);
+  if (entry.dayMarker === "start" || entry.dayMarker === "end") {
+    $("modalDayMarker").hidden = false;
+    $("modalDayMarker").className = "day-marker-badge " + entry.dayMarker;
+    $("modalDayMarker").textContent = entry.dayMarker === "start" ? "☀️ START OF DAY" : "🌙 END OF DAY";
+  } else {
+    $("modalDayMarker").hidden = true;
+  }
   const equipWrap = $("modalEquip");
   equipWrap.innerHTML = "";
   (entry.equipment || []).forEach((eq) => {
@@ -858,7 +912,7 @@ function buildPrintArea(entries, filters) {
       const locStr = e.location ? locationDisplayText(e.location).replace("\n", " — ") : "";
       card.innerHTML = `
         <img src="${blobUrlFor(e.id, e.photoBlob)}" style="width:100%;max-height:220px;object-fit:cover;border-radius:6px;margin-bottom:8px;" />
-        <div style="font-weight:700;color:#7B1E1E;font-size:13px;">${escapeHtml(e.jobName)}</div>
+        <div style="font-weight:700;color:#7B1E1E;font-size:13px;">${escapeHtml(e.jobName)}${e.dayMarker === "start" ? ' <span style="background:#FFF3D6;color:#7F6000;font-size:10px;padding:2px 6px;border-radius:8px;">START OF DAY</span>' : e.dayMarker === "end" ? ' <span style="background:#E0E5F0;color:#1F3864;font-size:10px;padding:2px 6px;border-radius:8px;">END OF DAY</span>' : ""}</div>
         <div style="font-size:11px;color:#595959;margin-bottom:4px;">${fmtDateTime(e.timestamp)}</div>
         <div style="font-size:11px;margin-bottom:4px;"><strong>Equipment:</strong> ${escapeHtml(equipStr)}</div>
         ${e.note ? `<div style="font-size:11px;margin-bottom:4px;"><strong>Notes:</strong> ${escapeHtml(e.note)}</div>` : ""}
@@ -1052,7 +1106,8 @@ async function generateReportPdf(entries, filters) {
         doc.setFont("helvetica", "bold");
         doc.setFontSize(11);
         doc.setTextColor(123, 30, 30);
-        doc.text(e.jobName, textX, ty);
+        const markerTag = e.dayMarker === "start" ? " [START OF DAY]" : e.dayMarker === "end" ? " [END OF DAY]" : "";
+        doc.text(e.jobName + markerTag, textX, ty);
         ty += 14;
 
         doc.setFont("helvetica", "normal");
@@ -1189,10 +1244,23 @@ function renderManageLists() {
     .sort((a, b) => a.name.localeCompare(b.name))
     .forEach((job) => {
       const li = document.createElement("li");
-      const span = document.createElement("span");
-      span.textContent = job.name;
-      li.appendChild(span);
+      li.style.cssText = "align-items:flex-start;";
+      const infoWrap = document.createElement("div");
+      const nameEl = document.createElement("div");
+      nameEl.textContent = job.name;
+      nameEl.style.fontWeight = "700";
+      infoWrap.appendChild(nameEl);
+      const subParts = [job.address, job.jobNumber ? `# ${job.jobNumber}` : "", job.description].filter(Boolean);
+      if (subParts.length) {
+        const subEl = document.createElement("div");
+        subEl.className = "hint-text";
+        subEl.style.margin = "2px 0 0";
+        subEl.textContent = subParts.join(" · ");
+        infoWrap.appendChild(subEl);
+      }
+      li.appendChild(infoWrap);
       const btn = document.createElement("button");
+      btn.style.flexShrink = "0";
       btn.textContent = "Remove";
       btn.addEventListener("click", async () => {
         if (!confirm(`Remove job site "${job.name}"? Existing photo entries for it are kept.`)) return;
@@ -1236,22 +1304,6 @@ function renderManageLists() {
     });
 }
 
-$("addJobBtn").addEventListener("click", async () => {
-  const input = $("newJobInput");
-  const name = input.value.trim();
-  if (!name) return;
-  const job = { id: uid(), name };
-  await idbPut("jobs", job);
-  state.jobs.push(job);
-  input.value = "";
-  renderManageLists();
-  renderJobSelect($("jobSelect"), false);
-  renderJobSelect($("historyJobFilter"), true);
-  renderJobSelect($("reportJobFilter"), true);
-  updateSaveEnabled();
-  toast("Job added");
-});
-
 $("addFleetBtn").addEventListener("click", async () => {
   const input = $("newFleetInput");
   const name = input.value.trim();
@@ -1286,6 +1338,55 @@ let gridReadings = [null, null, null, null, null]; // canonical feet values
 /* ---- Unit conversion (feet is the canonical internal unit) ---- */
 
 let calcUnitMode = "dft"; // dft | ftin | in | m
+
+// Mobile numeric keypads (inputmode="decimal") generally have no minus key,
+// so Cut/Fill is chosen with an explicit toggle instead of typing a sign —
+// the depth field itself is always a plain positive magnitude.
+let rectCutFillMode = "fill";
+let trenchCutFillMode = "cut";
+
+function signedDepth(magnitude, mode) {
+  if (magnitude === null) return null;
+  return mode === "fill" ? Math.abs(magnitude) : -Math.abs(magnitude);
+}
+
+function setCutFillToggle(cutBtnId, fillBtnId, mode) {
+  $(cutBtnId).classList.toggle("active", mode === "cut");
+  $(fillBtnId).classList.toggle("active", mode === "fill");
+}
+
+$("rectCutBtn").addEventListener("click", () => {
+  rectCutFillMode = "cut";
+  try {
+    localStorage.setItem("gci_rect_cutfill", rectCutFillMode);
+  } catch (e) {}
+  setCutFillToggle("rectCutBtn", "rectFillBtn", rectCutFillMode);
+  computeRect();
+});
+$("rectFillBtn").addEventListener("click", () => {
+  rectCutFillMode = "fill";
+  try {
+    localStorage.setItem("gci_rect_cutfill", rectCutFillMode);
+  } catch (e) {}
+  setCutFillToggle("rectCutBtn", "rectFillBtn", rectCutFillMode);
+  computeRect();
+});
+$("trenchCutBtn").addEventListener("click", () => {
+  trenchCutFillMode = "cut";
+  try {
+    localStorage.setItem("gci_trench_cutfill", trenchCutFillMode);
+  } catch (e) {}
+  setCutFillToggle("trenchCutBtn", "trenchFillBtn", trenchCutFillMode);
+  computeTrench();
+});
+$("trenchFillBtn").addEventListener("click", () => {
+  trenchCutFillMode = "fill";
+  try {
+    localStorage.setItem("gci_trench_cutfill", trenchCutFillMode);
+  } catch (e) {}
+  setCutFillToggle("trenchCutBtn", "trenchFillBtn", trenchCutFillMode);
+  computeTrench();
+});
 const FT_PER_M = 3.28084;
 const SQFT_PER_SQM = 10.7639;
 
@@ -1428,9 +1529,9 @@ function setText(id, value) {
 function updateRectIllustration(length, width, depth) {
   const hasAll = length !== null && width !== null && depth !== null;
   const boxW = hasAll ? mapClamp(length, 150, 40, 190) : 120;
-  const boxH = hasAll ? mapClamp(Math.abs(depth), 15, 20, 90) : 50;
+  const boxH = hasAll ? mapClamp(Math.abs(depth), 15, 20, 60) : 50;
   const boxX = 150 - boxW / 2;
-  const gradeY = 50;
+  const gradeY = 95;
   const isFill = hasAll ? depth >= 0 : false;
   const boxY = isFill ? gradeY - boxH : gradeY;
   const dimLineY = isFill ? boxY - 12 : boxY + boxH + 12;
@@ -1506,7 +1607,7 @@ $("rectViewIsoBtn").addEventListener("click", () => {
 function computeRect() {
   const length = calcVal("rect", "length");
   const width = calcVal("rect", "width");
-  const depth = calcVal("rect", "depth");
+  const depth = signedDepth(calcVal("rect", "depth"), rectCutFillMode);
   updateRectIllustration(length, width, depth);
   updateRectIsoIllustration(length, width, depth);
   if (length === null || width === null || depth === null) {
@@ -1548,7 +1649,7 @@ function updateElevIllustration(existing, proposed, area) {
 
   const fillTop = Math.min(existingY, propY);
   const fillBottom = Math.max(existingY, propY);
-  setAttr("elevFillArea", "points", `40,${fillTop} 260,${fillTop} 260,${fillBottom} 40,${fillBottom}`);
+  setAttr("elevFillArea", "points", `20,${fillTop} 280,${fillTop} 280,${fillBottom} 20,${fillBottom}`);
   const fillEl = document.getElementById("elevFillArea");
   if (fillEl) fillEl.setAttribute("fill", isFill ? "url(#fillHatch)" : "url(#cutHatch)");
 
@@ -1619,8 +1720,8 @@ function updateTrenchIllustration(topWidth, bottomWidth, depth) {
   const hasAll = topWidth !== null && bottomWidth !== null && depth !== null;
   const topW = hasAll ? mapClamp(topWidth, 20, 30, 170) : 120;
   const botW = hasAll ? mapClamp(bottomWidth, 20, 20, 130) : 90;
-  const h = hasAll ? mapClamp(Math.abs(depth), 12, 25, 90) : 60;
-  const gradeY = 45;
+  const h = hasAll ? mapClamp(Math.abs(depth), 12, 25, 60) : 50;
+  const gradeY = 95;
   const isFill = hasAll ? depth >= 0 : false;
   const topY = isFill ? gradeY - h : gradeY;
   const botY = isFill ? gradeY : gradeY + h;
@@ -1768,7 +1869,7 @@ function resolveTrenchWidths(depth) {
 }
 
 function computeTrench() {
-  const depth = calcVal("trench", "depth");
+  const depth = signedDepth(calcVal("trench", "depth"), trenchCutFillMode);
   const { topWidth, bottomWidth } = resolveTrenchWidths(depth);
   const length = calcVal("trench", "length");
   updateTrenchIllustration(topWidth, bottomWidth, depth);
@@ -2191,6 +2292,15 @@ function restoreCalcInputs() {
   } catch (e) {}
   updateTrenchWidthModeUI();
 
+  try {
+    const storedRectCutFill = localStorage.getItem("gci_rect_cutfill");
+    if (storedRectCutFill === "cut" || storedRectCutFill === "fill") rectCutFillMode = storedRectCutFill;
+    const storedTrenchCutFill = localStorage.getItem("gci_trench_cutfill");
+    if (storedTrenchCutFill === "cut" || storedTrenchCutFill === "fill") trenchCutFillMode = storedTrenchCutFill;
+  } catch (e) {}
+  setCutFillToggle("rectCutBtn", "rectFillBtn", rectCutFillMode);
+  setCutFillToggle("trenchCutBtn", "trenchFillBtn", trenchCutFillMode);
+
   document.querySelectorAll(".calc-input").forEach((el) => {
     const { calc, field } = el.dataset;
     let stored = null;
@@ -2220,13 +2330,13 @@ function getCalcSectionsForPdf() {
 
   const length = calcVal("rect", "length");
   const width = calcVal("rect", "width");
-  const rDepth = calcVal("rect", "depth");
+  const rDepth = signedDepth(calcVal("rect", "depth"), rectCutFillMode);
   if (length !== null && width !== null && rDepth !== null) {
     const cy = (length * width * Math.abs(rDepth)) / 27;
     sections.push({
       title: "Rectangular Cut / Fill Volume",
-      lines: [`Length: ${length} ft`, `Width: ${width} ft`, `Depth: ${rDepth} ft`],
-      result: `${fmtCY(cy)} cu. yd.`,
+      lines: [`Length: ${length} ft`, `Width: ${width} ft`, `${rDepth >= 0 ? "Fill" : "Cut"} Depth: ${roundClean(Math.abs(rDepth))} ft`],
+      result: `${rDepth >= 0 ? "Fill" : "Cut"}: ${fmtCY(cy)} cu. yd.`,
     });
   }
 
@@ -2244,7 +2354,7 @@ function getCalcSectionsForPdf() {
     });
   }
 
-  const tDepth = calcVal("trench", "depth");
+  const tDepth = signedDepth(calcVal("trench", "depth"), trenchCutFillMode);
   const { topWidth, bottomWidth } = resolveTrenchWidths(tDepth);
   const tLength = calcVal("trench", "length");
   if (topWidth !== null && bottomWidth !== null && tDepth !== null && tLength !== null) {
@@ -2633,7 +2743,29 @@ async function init() {
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js").catch(() => {});
+    navigator.serviceWorker
+      .register("sw.js")
+      .then((reg) => {
+        // register() alone can silently keep serving an old worker for a long
+        // time — update() is spec-required to bypass HTTP/CDN caching when
+        // fetching sw.js, so call it every load to actually catch new deploys.
+        reg.update().catch(() => {});
+        reg.addEventListener("updatefound", () => {
+          const installing = reg.installing;
+          if (!installing) return;
+          installing.addEventListener("statechange", () => {
+            if (installing.state === "activated") {
+              // A new version just took over — reload once so the page picks
+              // up the new HTML/JS instead of running stale code against it.
+              if (!sessionStorage.getItem("gci_sw_reloaded")) {
+                sessionStorage.setItem("gci_sw_reloaded", "1");
+                location.reload();
+              }
+            }
+          });
+        });
+      })
+      .catch(() => {});
   });
 }
 
