@@ -1401,7 +1401,8 @@ const DIM_FIELD_LABELS = {
   "trench:bottomWidth": "Bottom Width",
   "trench:depth": "Depth",
   "trench:length": "Length",
-  "grid:area": "Pad / Pond Area",
+  "grid:area": "Pad / Pond Area (top/rim)",
+  "grid:floorArea": "Pond Floor Area",
 };
 
 function unitSuffix(unitType, mode) {
@@ -1932,6 +1933,31 @@ function gridPointPosition(i, total) {
   return [x0, y1 - d];
 }
 
+function updateGridFloorInset(area, floorArea) {
+  const rectEl = $("gridFloorRect");
+  const labelEl = $("gridFloorLabel");
+  if (area === null || floorArea === null || floorArea <= 0 || floorArea >= area) {
+    rectEl.setAttribute("hidden", "");
+    labelEl.setAttribute("hidden", "");
+    return;
+  }
+  const outerX = 70, outerY = 20, outerW = 160, outerH = 90;
+  const ratio = Math.sqrt(Math.min(floorArea / area, 1));
+  const scale = Math.max(ratio, 0.2); // keep it visible even for very small floors
+  const w = outerW * scale;
+  const h = outerH * scale;
+  const x = outerX + (outerW - w) / 2;
+  const y = outerY + (outerH - h) / 2;
+  rectEl.removeAttribute("hidden");
+  labelEl.removeAttribute("hidden");
+  rectEl.setAttribute("x", x);
+  rectEl.setAttribute("y", y);
+  rectEl.setAttribute("width", w);
+  rectEl.setAttribute("height", h);
+  labelEl.setAttribute("x", x + w / 2);
+  labelEl.setAttribute("y", y + 12);
+}
+
 function renderGridPointsDiagram() {
   const group = $("gridPointsGroup");
   group.innerHTML = "";
@@ -2007,6 +2033,8 @@ function renderGridReadings() {
 function computeGrid() {
   renderGridPointsDiagram();
   const area = calcVal("grid", "area");
+  const floorArea = calcVal("grid", "floorArea");
+  updateGridFloorInset(area, floorArea);
   const valid = gridReadings.filter((v) => v !== null && !Number.isNaN(v));
   if (area === null || valid.length === 0) {
     calcLastCY.grid = null;
@@ -2015,12 +2043,17 @@ function computeGrid() {
     return;
   }
   const avg = valid.reduce((a, b) => a + b, 0) / valid.length;
-  const cy = (area * Math.abs(avg)) / 27;
+  const hasFloor = floorArea !== null && floorArea > 0;
+  const effectiveArea = hasFloor ? (area + floorArea) / 2 : area;
+  const cy = (effectiveArea * Math.abs(avg)) / 27;
   calcLastCY.grid = cy;
   const label = avg > 0 ? "Cut" : avg < 0 ? "Fill" : "Level";
+  const areaNote = hasFloor
+    ? `avg area (${roundClean(area)} top + ${roundClean(floorArea)} floor)/2 = ${roundClean(effectiveArea)} sq ft`
+    : `× ${area} sq ft`;
   setCalcResult(
     "result-grid",
-    `${label}: <span class="big">${fmtCY(cy)} cu. yd.</span><span class="muted">Avg depth ${Math.abs(avg).toFixed(2)}' across ${valid.length} reading${valid.length === 1 ? "" : "s"} × ${area} sq ft ÷ 27</span>`
+    `${label}: <span class="big">${fmtCY(cy)} cu. yd.</span><span class="muted">Avg depth ${Math.abs(avg).toFixed(2)}' across ${valid.length} reading${valid.length === 1 ? "" : "s"} ${areaNote} ÷ 27</span>`
   );
   setText("gridAvgLabel", label === "Level" ? "Level — no cut/fill" : `Avg: ${Math.abs(avg).toFixed(2)}' ${label}`);
 }
@@ -2399,17 +2432,21 @@ function getCalcSectionsForPdf() {
   }
 
   const gArea = calcVal("grid", "area");
+  const gFloorArea = calcVal("grid", "floorArea");
+  const gHasFloor = gFloorArea !== null && gFloorArea > 0 && gFloorArea < (gArea || 0);
+  const gEffectiveArea = gHasFloor ? (gArea + gFloorArea) / 2 : gArea;
   const gValidIndexed = gridReadings
     .map((v, i) => ({ v, i }))
     .filter((r) => r.v !== null && !Number.isNaN(r.v));
   if (gArea !== null && gValidIndexed.length > 0) {
     const avg = gValidIndexed.reduce((a, r) => a + r.v, 0) / gValidIndexed.length;
-    const cy = (gArea * Math.abs(avg)) / 27;
+    const cy = (gEffectiveArea * Math.abs(avg)) / 27;
     const label = avg > 0 ? "Cut" : avg < 0 ? "Fill" : "Level";
     sections.push({
       title: "Pad / Pond Avg. Depth (Multi-Point)",
       lines: [
-        `Area: ${gArea} sq ft`,
+        `Top/Rim Area: ${gArea} sq ft`,
+        ...(gHasFloor ? [`Floor Area: ${gFloorArea} sq ft (avg area used: ${roundClean(gEffectiveArea)} sq ft)`] : []),
         `Readings: ${gValidIndexed.map((r) => `${gridPointLabel(r.i)}: ${r.v}'`).join(", ")}`,
         `Average depth: ${avg.toFixed(2)} ft (${label})`,
       ],
