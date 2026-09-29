@@ -675,6 +675,31 @@ function renderCalDay(dateStr, entries) {
       $("calDayPdfBtn").textContent = "📄 Download PDF for this day";
     }
   };
+
+  $("calDayDeleteBtn").hidden = entries.length === 0;
+  $("calDayDeleteBtn").onclick = async () => {
+    const dayLabel = fmtDateOnly(dateStr + "T00:00:00");
+    if (
+      !confirm(
+        `Delete all ${entries.length} entr${entries.length === 1 ? "y" : "ies"} logged on ${dayLabel}? This cannot be undone.`
+      )
+    )
+      return;
+
+    await Promise.all(entries.map((e) => idbDelete("entries", e.id)));
+    entries.forEach((e) => {
+      if (objectUrlCache.has(e.id)) {
+        URL.revokeObjectURL(objectUrlCache.get(e.id));
+        objectUrlCache.delete(e.id);
+      }
+    });
+    const deletedIds = new Set(entries.map((e) => e.id));
+    state.entries = state.entries.filter((e) => !deletedIds.has(e.id));
+
+    toast(`Deleted ${dayLabel}`);
+    renderCalendar();
+    renderCalDay(dateStr, []);
+  };
 }
 
 $("calPrevBtn").addEventListener("click", () => {
@@ -2194,16 +2219,6 @@ $("resetEquipmentBtn").addEventListener("click", async () => {
 
 $("resetCalcBtn").addEventListener("click", () => {
   if (!confirm("Clear every saved calculator input and reset units to Decimal Feet?\n\nThis cannot be undone.")) return;
-  clearLocalStorageCalcKeys();
-  location.reload();
-});
-
-$("clearDataBtn").addEventListener("click", async () => {
-  const choice = confirm(
-    "Clear ALL saved photos, jobs, equipment, and calculator settings from this device? This cannot be undone.\n\nPress OK to clear, Cancel to go back."
-  );
-  if (!choice) return;
-  await clearStores(["jobs", "equipment", "entries"]);
   clearLocalStorageCalcKeys();
   location.reload();
 });
